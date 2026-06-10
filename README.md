@@ -25,11 +25,19 @@ reproducible scores:
 | **Failure modes** | Characterization, not pass/fail: arithmetic it will get wrong, no-tool-fits confabulation, and guardrail refusals. |
 
 Plus a **performance + resource track**: throughput (tok/s), time-to-first-token, a
-CPU-by-process table showing *where* the work lands, and optional CPU/GPU/ANE power.
+CPU-by-process table showing *where* the work lands, optional CPU/GPU/ANE power
+(`--power`), and an **ANE hardware-activity capture** via Instruments (`--ane`) that
+proves the model runs on the Neural Engine even when every power meter reads zero.
+
+Every run is deterministic (greedy decoding) and graded by code, so scores are stable
+and runs are diffable over time — it works as a regression harness as the OS updates.
 
 ## Sample results
 
-From one run on macOS 27 Golden Gate (build 26A5353q, M-series), `system` model, greedy decoding:
+From one run on macOS 27 Golden Gate (build 26A5353q, M-series MacBook Pro),
+`system` model, greedy decoding:
+
+**Capability — suite scores**
 
 | Suite | Cases | Valid JSON | Avg score |
 |---|---:|---:|---:|
@@ -38,17 +46,30 @@ From one run on macOS 27 Golden Gate (build 26A5353q, M-series), `system` model,
 | Enum / Const Enforcement | 14 | 100% | **100%** |
 | Failure Modes | 10 | 100% | 78% (1 guardrail refusal) |
 
-- **Throughput:** ~52 tok/s · **TTFT:** ~340 ms
-- **Arithmetic:** 2/4 correct — e.g. it returned `47.25` for a total that was `50.70`.
+**Performance & compute**
+
+| Metric | Value |
+|---|---:|
+| Throughput | ~52 tok/s |
+| Time-to-first-token | ~340 ms |
+| ANE duty cycle under load (`--ane`) | **~87%** |
+| Neural Engine ops / run | ~1,500 |
+| `fm` client CPU | ~3% (it's a thin XPC client) |
+| GPU power under load | flat (~idle) — work isn't on the GPU |
+
+**Behavioral findings**
+
+- **Structure is bulletproof:** 100% valid JSON across every suite — the decoder is
+  grammar-constrained, so malformed output is impossible. `enum`/`const` are *hard*
+  enforced (ask for Kelvin against `[celsius, fahrenheit]` and it physically cannot
+  emit Kelvin).
+- **Arithmetic is not:** 2/4 correct — it returned `47.25` for a total that was `50.70`.
   *Extract raw fields; compute derived values in your own code.*
 - **No-tool-fits:** 5/5 correctly used an explicit `respond_directly` escape tool.
   *Without one it confabulates a tool call — so always give it an escape hatch.*
-- **Compute:** the inference daemon (`TGOnDeviceInferenceProviderService`) and
-  `modelcatalogd` carry the load; the `fm` client itself is ~3% CPU and the **GPU never
-  appears**.
-- **ANE proof (`--ane`):** an Instruments Core ML trace captured **~1,500 "Neural Engine
+- **It runs on the ANE:** an Instruments Core ML trace captured **~1,500 "Neural Engine
   Prediction" hardware intervals at ~87% ANE duty cycle** during generation — direct
-  proof inference runs on the **Apple Neural Engine**.
+  proof inference is on the **Apple Neural Engine**, leaving CPU and GPU free.
 
 ### Why power tools say the ANE is idle (and how `--ane` proves it isn't)
 
