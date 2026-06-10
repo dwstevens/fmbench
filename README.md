@@ -130,6 +130,32 @@ fmbench/
 cases/*.jsonl       # one file per suite; objectively-correct expected values
 ```
 
+## Open questions & next experiments
+
+We've mapped a lot, but this model's ceiling is far from charted. Threads worth pulling —
+PRs and findings welcome:
+
+- **End-to-end pipelines (the obvious next step).** Chain the model through a full
+  pipeline — interactive **chat → freeform response → structured extraction → tool-schema
+  fill**, each stage its own `fm` call — and measure where errors *compound* across stages.
+  Can a ~3B on-device model drive a multi-stage agent loop, or does it drift?
+- **The context ceiling.** Structured output breaks at ~85–90 fields because the
+  schema-as-grammar shares the ~4K window with prompt + output. How much does schema
+  verbosity actually cost in tokens? Would a more compact schema buy more fields? Is there
+  a larger-context configuration?
+- **Multimodal.** `fm respond --image` is untested here — how good is *structured
+  extraction from images* (receipts, forms, screenshots) on the ANE?
+- **`fm serve` as an agent backend.** It speaks the OpenAI API — wire it into a real
+  tool-use loop and see how many steps it sustains before losing the thread.
+- **Reasoning workarounds.** Arithmetic is ~50%. Does chain-of-thought help, or is the
+  honest fix always "give it a calculator tool"?
+- **Guardrails.** Benign prompts get refused sometimes — what's the false-positive rate,
+  and does `--guardrails permissive-content-transformations` move it?
+- **PCC vs `system`.** The Private Cloud Compute model wasn't reachable in our context;
+  the capability / latency / quota delta vs on-device is wide open.
+- **As a regression harness.** fmbench is deterministic by design — run it across OS
+  updates and watch the numbers move as Apple ships new weights.
+
 ## License
 
 MIT © 2026 David Stevens
