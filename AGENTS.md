@@ -23,6 +23,7 @@ uv run python run.py --quick         # 4 cases/suite, no perf — fast smoke tes
 uv run python run.py --suite routing # one suite (repeatable: --suite a --suite b)
 uv run python run.py --no-perf       # skip perf/resource sampling
 uv run python run.py --power         # add CPU/GPU/ANE power table (prompts for sudo)
+uv run python run.py --ane           # ANE hardware-interval capture via Instruments (~20s, needs xctrace)
 
 uv run python -m py_compile run.py fmbench/*.py   # syntax check
 uv run python -m fmbench.schemas schemas          # regenerate schema files
@@ -43,6 +44,9 @@ parse → grade → report) in ~20s without the multi-minute perf track.
   (`routing`, `extraction`, `constraints`, `failure_modes`). No I/O, no `fm` calls.
 - `fmbench/perf.py` — throughput, time-to-first-token, per-process CPU sampling, and
   optional `powermetrics` power sampling.
+- `fmbench/ane.py` — records a system-wide Instruments "Core ML" trace via `xctrace` while
+  generating, exports the `ane-hw-intervals-internal` table, and reports ANE op count +
+  active time + duty cycle. The authoritative "is it the ANE?" signal; no sudo.
 - `fmbench/report.py` — renders JSON + Markdown + a self-contained HTML page.
 - `cases/*.jsonl` — one file per suite; one JSON object per line.
 

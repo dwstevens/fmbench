@@ -45,7 +45,22 @@ From one run on macOS 27 Golden Gate (build 26A5353q, M-series), `system` model,
   *Without one it confabulates a tool call — so always give it an escape hatch.*
 - **Compute:** the inference daemon (`TGOnDeviceInferenceProviderService`) and
   `modelcatalogd` carry the load; the `fm` client itself is ~3% CPU and the **GPU never
-  appears** — it's all on the ANE.
+  appears**.
+- **ANE proof (`--ane`):** an Instruments Core ML trace captured **~1,500 "Neural Engine
+  Prediction" hardware intervals at ~87% ANE duty cycle** during generation — direct
+  proof inference runs on the **Apple Neural Engine**.
+
+### Why power tools say the ANE is idle (and how `--ane` proves it isn't)
+
+`powermetrics`, `mactop`, and even raw IOReport energy counters all report **~0 W for the
+ANE under load** on some Macs — which is misleading. Two reasons: (1) ANE inference is
+hundreds of **sub-30 ms bursts**, so any instantaneous power sample lands in the idle gaps;
+(2) on this hardware the CPU/ANE energy rails simply aren't populated (they read 0 even
+when busy). The fix isn't a faster sampler — it's a different *kind* of signal. Instruments'
+`ane-hw-intervals-internal` table records **every ANE hardware interval** directly, so
+`fmbench --ane` can show the ANE was busy ~87% of the generation window even though every
+watt-meter read zero. The GPU's only readable power rail, meanwhile, stays flat under load
+— measured confirmation the work isn't on the GPU.
 
 ## Install & run
 
@@ -60,7 +75,10 @@ uv run python run.py                 # all suites + perf/resource track
 uv run python run.py --suite routing # a single suite
 uv run python run.py --quick         # 4 cases/suite, no perf (fast smoke test)
 uv run python run.py --power         # add a CPU/GPU/ANE power table (needs sudo)
+uv run python run.py --ane           # capture ANE hardware activity (Instruments, ~20s, no sudo)
 ```
+
+`--ane` needs the Xcode command-line tools (`xctrace`); everything else needs only `fm`.
 
 Each run writes a timestamped folder under `results/` with `report.html` (a styled,
 screenshot-ready page), `report.md`, and `results.json` for diffing runs over time.
@@ -84,6 +102,7 @@ run.py              # entrypoint: run suites, grade, write reports
 fmbench/
   schemas.py        # fm-dialect schema builder + named schema registry
   runner.py         # invoke `fm`, parse JSON, detect guardrail refusals
+  ane.py            # ANE hardware-interval capture via Instruments Core ML trace
   grading.py        # structural / routing / field / enum / failure graders
   perf.py           # throughput, TTFT, process-CPU + optional power sampling
   report.py         # JSON + Markdown + pretty HTML
