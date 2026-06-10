@@ -161,39 +161,55 @@ def _role(d: str) -> str:
 # ----------------------------------------------------------------------------
 # Optional power sampling via powermetrics (needs sudo)
 # ----------------------------------------------------------------------------
-def sample_power(duration_s: float = 25.0, interval_ms: int = 250) -> dict:
-    """Run a sustained generation while sampling CPU/GPU/ANE power (mW).
-
-    Requires sudo (powermetrics). Returns {available: bool, ...}. If sudo is not
-    granted non-interactively this returns {available: False, reason: ...}.
-    """
-    n = max(1, int(duration_s / (interval_ms / 1000)))
-    gen = subprocess.Popen(["fm", "respond", "--no-stream", LONG_PROMPT * 2],
-                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+def sudo_cached() -> bool:
+    """True if sudo credentials are already cached (no password needed now)."""
     try:
-        pm = subprocess.run(
-            ["sudo", "-n", "powermetrics", "--samplers", "cpu_power,gpu_power,ane_power",
-             "-i", str(interval_ms), "-n", str(n)],
-            capture_output=True, text=True, timeout=duration_s + 30)
-    except Exception as exc:  # noqa: BLE001
-        gen.kill(); gen.wait()
-        return {"available": False, "reason": f"{type(exc).__name__}: {exc}"}
-    gen.kill(); gen.wait()
+        return subprocess.run(["sudo", "-n", "true"],
+                              capture_output=True).returncode == 0
+    except Exception:  # noqa: BLE001
+        return False
 
-    if pm.returncode != 0:
+
+def sample_power(duration_s: float = 20.0, interval_ms: int = 250) -> dict:
+    """Sample CPU/GPU/ANE power (mW) via powermetrics while a generation runs.
+
+    On Apple Silicon the CPU/GPU/ANE power lines all live in the ``cpu_power``
+    sampler block. Requires cached sudo (call after `sudo -v`); returns
+    {available: False, ...} otherwise so the rest of the run is unaffected.
+    """
+    if not sudo_cached():
         return {"available": False,
-                "reason": "sudo/powermetrics unavailable (run with sudo for the power table)",
-                "stderr": pm.stderr[:200]}
+                "reason": "sudo not available — run `sudo -v` first, or omit --power"}
+
+    n = max(1, int(duration_s / (interval_ms / 1000)))
+    pm = subprocess.Popen(
+        ["sudo", "-n", "powermetrics", "--samplers", "cpu_power,gpu_power",
+         "-i", str(interval_ms), "-n", str(n)],
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+
+    # Keep the ANE busy for the entire sampling window (re-launch if a gen finishes).
+    while pm.poll() is None:
+        try:
+            subprocess.run(["fm", "respond", "--no-stream", LONG_PROMPT],
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                           timeout=duration_s + 30)
+        except Exception:  # noqa: BLE001
+            break
+    out_text, err_text = pm.communicate()
+
+    if pm.returncode not in (0, None):
+        return {"available": False, "reason": "powermetrics failed",
+                "stderr": (err_text or "")[:200]}
 
     def _series(label: str) -> list[float]:
-        return [float(m) for m in re.findall(rf"{label}:\s*([\d.]+)\s*mW", pm.stdout)]
+        return [float(m) for m in re.findall(rf"{label}:\s*([\d.]+)\s*mW", out_text)]
 
-    out = {"available": True}
+    result = {"available": True, "samples": n, "window_s": duration_s}
     for key, label in (("cpu", "CPU Power"), ("gpu", "GPU Power"), ("ane", "ANE Power")):
         vals = _series(label)
-        out[key] = {
+        result[key] = {
             "avg_mw": round(statistics.mean(vals), 1) if vals else None,
             "peak_mw": round(max(vals), 1) if vals else None,
             "n": len(vals),
         }
-    return out
+    return result

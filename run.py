@@ -13,6 +13,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import subprocess
 import time
 
 from fmbench import grading, perf as perfmod, report, schemas
@@ -146,8 +147,16 @@ def main() -> None:
             print(f"  ttft:       {perf['ttft']['median_ttft_s']*1000:.0f} ms")
         perf["resources"] = perfmod.sample_resources().__dict__
         if args.power:
-            print("  sampling power (powermetrics, may prompt for sudo)…")
+            print("  power: validating sudo (powermetrics needs root)…")
+            subprocess.run(["sudo", "-v"])  # one interactive prompt, inherits terminal
+            print("  power: sampling CPU/GPU/ANE for ~20s under sustained load…")
             perf["power"] = perfmod.sample_power()
+            p = perf["power"]
+            if p.get("available"):
+                print(f"  power: CPU {p['cpu']['avg_mw']} · GPU {p['gpu']['avg_mw']} · "
+                      f"ANE {p['ane']['avg_mw']} mW (avg)")
+            else:
+                print(f"  {C['y']}power: unavailable — {p.get('reason')}{C['x']}")
 
     meta = {"model": "system", "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
             "total_cases": len(results), "suites": suites}
@@ -163,6 +172,14 @@ def main() -> None:
         for r in perf["resources"]["rows"]:
             print(f"  {r['process']:<46}{r['avg_cpu']:>6}{r['peak_cpu']:>7}")
         print(f"  {C['d']}(GPU absent — inference runs on the ANE){C['x']}")
+    pw = perf.get("power")
+    if pw and pw.get("available"):
+        print(f"\n{C['b']}══ CPU / GPU / ANE power (mW, powermetrics) ═════════════{C['x']}")
+        print(f"  {'Engine':<10}{'Avg mW':>9}{'Peak mW':>10}")
+        for key, name in (("cpu", "CPU"), ("gpu", "GPU"), ("ane", "ANE")):
+            d = pw.get(key, {})
+            print(f"  {name:<10}{str(d.get('avg_mw')):>9}{str(d.get('peak_mw')):>10}")
+        print(f"  {C['d']}(GPU idle while ANE carries the load — the receipts){C['x']}")
     print(f"\n{C['g']}reports:{C['x']} {paths['html']}")
     print(f"         {paths['md']}\n         {paths['json']}")
 
