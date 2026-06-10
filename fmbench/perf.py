@@ -14,9 +14,11 @@ visible; the process table localizes the CPU-side dispatch cost.
 """
 from __future__ import annotations
 
+import os
 import re
 import statistics
 import subprocess
+import tempfile
 import time
 from dataclasses import dataclass, field
 
@@ -182,27 +184,43 @@ def sample_power(duration_s: float = 20.0, interval_ms: int = 250) -> dict:
                 "reason": "sudo not available — run `sudo -v` first, or omit --power"}
 
     n = max(1, int(duration_s / (interval_ms / 1000)))
-    pm = subprocess.Popen(
-        ["sudo", "-n", "powermetrics", "--samplers", "cpu_power,gpu_power",
-         "-i", str(interval_ms), "-n", str(n)],
-        stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    # Write powermetrics output to a file, NOT a pipe: it emits far more than the 64 KB
+    # pipe buffer, and draining a pipe only after the load loop would deadlock.
+    with tempfile.NamedTemporaryFile("w+", suffix=".pm", delete=False) as tf:
+        pm_path = tf.name
+    hard_deadline = time.perf_counter() + duration_s + 45  # wall-clock guard
+    with open(pm_path, "w") as out_fh:
+        pm = subprocess.Popen(
+            ["sudo", "-n", "powermetrics", "--samplers", "cpu_power,gpu_power",
+             "-i", str(interval_ms), "-n", str(n)],
+            stdout=out_fh, stderr=subprocess.DEVNULL)
 
-    # Keep the ANE busy for the entire sampling window (re-launch if a gen finishes).
-    while pm.poll() is None:
+        # Keep the ANE busy across the sampling window (re-launch if a gen finishes).
+        while pm.poll() is None and time.perf_counter() < hard_deadline:
+            try:
+                subprocess.run(["fm", "respond", "--no-stream", LONG_PROMPT],
+                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                               timeout=30)
+            except Exception:  # noqa: BLE001
+                break
         try:
-            subprocess.run(["fm", "respond", "--no-stream", LONG_PROMPT],
-                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                           timeout=duration_s + 30)
-        except Exception:  # noqa: BLE001
-            break
-    out_text, err_text = pm.communicate()
+            pm.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            pm.kill()
 
-    if pm.returncode not in (0, None):
-        return {"available": False, "reason": "powermetrics failed",
-                "stderr": (err_text or "")[:200]}
+    with open(pm_path) as fh:
+        out_text = fh.read()
+    try:
+        os.unlink(pm_path)
+    except OSError:
+        pass
 
     def _series(label: str) -> list[float]:
         return [float(m) for m in re.findall(rf"{label}:\s*([\d.]+)\s*mW", out_text)]
+
+    if not _series("CPU Power") and not _series("GPU Power"):
+        return {"available": False,
+                "reason": "powermetrics produced no power samples (unexpected output format)"}
 
     result = {"available": True, "samples": n, "window_s": duration_s}
     for key, label in (("cpu", "CPU Power"), ("gpu", "GPU Power"), ("ane", "ANE Power")):
