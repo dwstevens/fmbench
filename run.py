@@ -16,11 +16,11 @@ import os
 import subprocess
 import time
 
-from fmbench import ane as anemod, grading, perf as perfmod, report, schemas
+from fmbench import ane as anemod, biggen, grading, perf as perfmod, report, schemas
 from fmbench.runner import run_fm
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-SUITES = ["routing", "extraction", "constraints", "failure_modes"]
+SUITES = ["routing", "extraction", "constraints", "failure_modes", "big_args"]
 
 DEFAULT_INSTRUCTIONS = {
     "routing": ("You are a tool router. Choose exactly ONE tool and output only its "
@@ -29,6 +29,7 @@ DEFAULT_INSTRUCTIONS = {
     "constraints": ("Output JSON matching the schema. Choose every value only from the "
                     "allowed options defined in the schema."),
     "failure_modes": "Choose exactly ONE tool that matches the request.",
+    "big_args": "Fill EVERY field of the tool's argument object with exactly the value given.",
 }
 
 C = {"g": "\033[32m", "y": "\033[33m", "r": "\033[31m", "d": "\033[2m",
@@ -40,13 +41,16 @@ def _color(frac: float) -> str:
 
 
 def load_cases(suite: str, limit: int | None) -> list[dict]:
-    path = os.path.join(HERE, "cases", f"{suite}.jsonl")
-    cases = []
-    with open(path) as fh:
-        for line in fh:
-            line = line.strip()
-            if line:
-                cases.append(json.loads(line))
+    if suite == "big_args":
+        cases = biggen.cases()                 # generated, not from disk
+    else:
+        path = os.path.join(HERE, "cases", f"{suite}.jsonl")
+        cases = []
+        with open(path) as fh:
+            for line in fh:
+                line = line.strip()
+                if line:
+                    cases.append(json.loads(line))
     return cases[:limit] if limit else cases
 
 
@@ -57,9 +61,14 @@ def run(suites: list[str], limit: int | None, schema_paths: dict[str, str]) -> l
         cases = load_cases(suite, limit)
         print(f"\n{C['b']}{C['c']}▶ {suite}{C['x']} ({len(cases)} cases)")
         for case in cases:
-            schema_key = case["schema"]
-            schema_path = schema_paths[schema_key]
-            schema_obj = schema_objs[schema_key]
+            if "schema_obj" in case:                       # generated suite (big_args)
+                schema_obj = case["schema_obj"]
+                schema_path = os.path.join(HERE, "schemas", f"{case['id']}.json")
+                with open(schema_path, "w") as fh:
+                    json.dump(schema_obj, fh)
+            else:
+                schema_obj = schema_objs[case["schema"]]
+                schema_path = schema_paths[case["schema"]]
             instr = case.get("instructions", DEFAULT_INSTRUCTIONS[suite])
             res = run_fm(case["prompt"], schema_path=schema_path, instructions=instr)
 
@@ -73,9 +82,12 @@ def run(suites: list[str], limit: int | None, schema_paths: dict[str, str]) -> l
                 grade = grading.GRADERS[suite](obj, schema_obj, case["expect"])
 
             row = {
-                "id": case["id"], "suite": suite, "prompt": case["prompt"],
-                "output": obj, "raw": res.raw.strip() if obj is None else None,
+                "id": case["id"], "suite": suite,
+                "prompt": case["prompt"] if suite != "big_args" else f"<{case.get('n_leaves')} fields>",
+                "output": obj if suite != "big_args" else None,  # big_args output is huge
+                "raw": res.raw.strip() if obj is None else None,
                 "elapsed": round(res.elapsed, 2), "refused": res.refused,
+                "n_leaves": case.get("n_leaves"),
                 "structural_valid": structural_valid, "grade": grade,
             }
             results.append(row)
@@ -99,7 +111,7 @@ def _case_note(suite: str, g: dict) -> str:
     if suite == "routing":
         t = "tool✓" if g.get("tool_ok") else ("tool~drift" if g.get("tool_drifted") else "tool✗")
         return f"{t} args {g.get('args_matched')}/{g.get('args_total')}"
-    if suite == "extraction":
+    if suite in ("extraction", "big_args"):
         return f"fields {g.get('fields_matched')}/{g.get('fields_total')}"
     if suite == "constraints":
         v = g.get("violations") or []

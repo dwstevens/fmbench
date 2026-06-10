@@ -227,4 +227,5 @@ GRADERS = {
     "extraction": grade_extraction,
     "constraints": grade_constraints,
     "failure_modes": grade_failure,
+    "big_args": grade_extraction,   # field accuracy over a large generated arg object
 }

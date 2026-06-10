@@ -11,7 +11,23 @@ SUITE_TITLES = {
     "extraction": "Nested Extraction",
     "constraints": "Enum / Const Enforcement",
     "failure_modes": "Failure Modes (characterization)",
+    "big_args": "Big-Args Scaling",
 }
+
+
+def _bigargs_rows(summary: dict) -> list[dict]:
+    """Per-level big-args results, sorted by field count."""
+    cases = summary.get("big_args", {}).get("cases", [])
+    rows = []
+    for c in cases:
+        g = c["grade"]
+        rows.append({
+            "leaves": c.get("n_leaves") or g.get("fields_total"),
+            "valid": c.get("structural_valid"),
+            "matched": g.get("fields_matched"), "total": g.get("fields_total"),
+            "acc": g.get("score", 0.0), "elapsed": c.get("elapsed"),
+        })
+    return sorted(rows, key=lambda r: r["leaves"] or 0)
 
 
 # ----------------------------------------------------------------------------
@@ -78,6 +94,18 @@ def to_markdown(summary: dict, perf: dict, meta: dict) -> str:
                 ok = "✅ used escape hatch" if g["used_escape"] else "❌ confabulated a tool"
                 L.append(f"- **{c['id']}** (no-tool-fits): chose `{g['got_tool']}` — {ok}")
         L.append("")
+
+    if "big_args" in summary:
+        L += ["## Big-args scaling (one tool call, growing arg object)", "",
+              "| Fields | Valid JSON | Field accuracy | Latency |",
+              "|---:|:---:|---:|---:|"]
+        for r in _bigargs_rows(summary):
+            L.append(f"| {r['leaves']} | {'✅' if r['valid'] else '❌'} | "
+                     f"{r['matched']}/{r['total']} ({r['acc']*100:.0f}%) {_md_bar(r['acc'], 12)} | "
+                     f"{r['elapsed']:.1f}s |")
+        L += ["", "_A single tool call whose argument object scales from a few fields to "
+              "~100 across mixed nesting. Watch where validity or field accuracy starts to "
+              "slip as the structure grows._", ""]
 
     if perf.get("throughput"):
         t = perf["throughput"]
@@ -266,6 +294,23 @@ def to_html(summary: dict, perf: dict, meta: dict) -> str:
             P.append(f'<tr><td class="mono">{html.escape(c["id"])}</td>'
                      f'<td>{kind}</td><td>{obs}</td><td>{tag}</td></tr>')
         P.append('</table></div>')
+
+    # big-args scaling curve
+    if "big_args" in summary:
+        P.append('<h2>Big-args scaling (one tool call, growing arg object)</h2>'
+                 '<div class="card"><table>')
+        P.append('<tr><th class="num">Fields</th><th>Valid JSON</th>'
+                 '<th>Field accuracy</th><th class="num">Latency</th></tr>')
+        for r in _bigargs_rows(summary):
+            tag = '<span class="tag y">valid</span>' if r["valid"] else '<span class="tag n">invalid</span>'
+            P.append(f'<tr><td class="num">{r["leaves"]}</td><td>{tag}</td>'
+                     f'<td class="barcell"><span class="pct {_color(r["acc"])}">'
+                     f'{r["matched"]}/{r["total"]}</span> {_bar(r["acc"])}</td>'
+                     f'<td class="num">{r["elapsed"]:.1f}s</td></tr>')
+        P.append('</table></div>')
+        P.append('<div class="note">A single tool call whose argument object scales to ~100 '
+                 'fields across mixed nesting — shows where validity or field accuracy slips '
+                 'as the structure grows.</div>')
 
     # performance + resources
     if perf.get("resources"):
