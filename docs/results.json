@@ -1,0 +1,2714 @@
+{
+  "meta": {
+    "model": "system",
+    "timestamp": "2026-06-10 08:02:32",
+    "total_cases": 52,
+    "suites": [
+      "routing",
+      "extraction",
+      "constraints",
+      "failure_modes",
+      "big_args"
+    ]
+  },
+  "perf": {
+    "throughput": {
+      "runs": 3,
+      "median_tok_s": 53.511787068921514,
+      "median_latency_s": 25.963403292000294,
+      "median_tokens": 1386,
+      "samples": [
+        {
+          "elapsed": 25.963403292000294,
+          "tokens": 1386,
+          "tok_s": 53.38283215078537
+        },
+        {
+          "elapsed": 23.1063430840004,
+          "tokens": 1253,
+          "tok_s": 54.2275337748109
+        },
+        {
+          "elapsed": 29.040330833999178,
+          "tokens": 1554,
+          "tok_s": 53.511787068921514
+        }
+      ]
+    },
+    "ttft": {
+      "runs": 3,
+      "median_ttft_s": 0.37944654099919717,
+      "samples": [
+        0.40403116699962993,
+        0.37944654099919717,
+        0.3784118750008929
+      ]
+    },
+    "resources": {
+      "rows": [
+        {
+          "process": "aned",
+          "avg_cpu": 4.0,
+          "peak_cpu": 71.7,
+          "role": "Apple Neural Engine daemon (ANE dispatch)"
+        },
+        {
+          "process": "modelcatalogd",
+          "avg_cpu": 12.8,
+          "peak_cpu": 41.9,
+          "role": "model weight management"
+        },
+        {
+          "process": "TGOnDeviceInferenceProviderService",
+          "avg_cpu": 20.3,
+          "peak_cpu": 38.7,
+          "role": "on-device inference worker"
+        },
+        {
+          "process": "fm",
+          "avg_cpu": 2.8,
+          "peak_cpu": 5.0,
+          "role": "CLI client (should be ~idle)"
+        },
+        {
+          "process": "GenerativeExperiencesSafetyInferenceProvider",
+          "avg_cpu": 1.2,
+          "peak_cpu": 3.5,
+          "role": "safety/guardrail inference"
+        },
+        {
+          "process": "IntelligencePlatformComputeService",
+          "avg_cpu": 0.1,
+          "peak_cpu": 3.5,
+          "role": "compute coordination"
+        }
+      ],
+      "samples": 48,
+      "duration_s": 26.039047291000315
+    },
+    "ane": {
+      "available": true,
+      "ops": 1623,
+      "active_ms": 15493.5,
+      "window_ms": 16845.3,
+      "busy_pct": 92.0,
+      "median_us": 1063.1,
+      "max_ms": 104.0,
+      "gens": 1
+    }
+  },
+  "results": [
+    {
+      "id": "route-weather-tokyo",
+      "suite": "routing",
+      "prompt": "What's the weather like in Tokyo this weekend? I prefer Fahrenheit.",
+      "output": {
+        "days": 3,
+        "tool": "get_weather",
+        "location": "Tokyo",
+        "unit": "fahrenheit"
+      },
+      "raw": null,
+      "elapsed": 2.5,
+      "refused": false,
+      "n_leaves": null,
+      "structural_valid": true,
+      "grade": {
+        "score": 1.0,
+        "tool_ok": true,
+        "tool_drifted": false,
+        "got_tool": "get_weather",
+        "arg_score": 1.0,
+        "args_matched": 2,
+        "args_total": 2,
+        "detail": {
+          "location": {
+            "want": "Tokyo",
+            "got": "Tokyo",
+            "ok": true
+          },
+          "unit": {
+            "want": "fahrenheit",
+            "got": "fahrenheit",
+            "ok": true
+          }
+        }
+      }
+    },
+    {
+      "id": "route-weather-paris-5d",
+      "suite": "routing",
+      "prompt": "Give me the 5-day forecast for Paris in Celsius.",
+      "output": {
+        "location": "Paris",
+        "unit": "celsius",
+        "tool": "get_weather",
+        "days": 5
+      },
+      "raw": null,
+      "elapsed": 0.99,
+      "refused": false,
+      "n_leaves": null,
+      "structural_valid": true,
+      "grade": {
+        "score": 1.0,
+        "tool_ok": true,
+        "tool_drifted": false,
+        "got_tool": "get_weather",
+        "arg_score": 1.0,
+        "args_matched": 3,
+        "args_total": 3,
+        "detail": {
+          "location": {
+            "want": "Paris",
+            "got": "Paris",
+            "ok": true
+          },
+          "unit": {
+            "want": "celsius",
+            "got": "celsius",
+            "ok": true
+          },
+          "days": {
+            "want": 5,
+            "got": 5,
+            "ok": true
+          }
+        }
+      }
+    },
+    {
+      "id": "route-weather-distractor",
+      "suite": "routing",
+      "prompt": "I'm planning a picnic and packing sandwiches \u2014 but first, is it going to rain in London? Use Celsius.",
+      "output": {
+        "tool": "get_weather",
+        "unit": "celsius",
+        "location": "London"
+      },
+      "raw": null,
+      "elapsed": 0.95,
+      "refused": false,
+      "n_leaves": null,
+      "structural_valid": true,
+      "grade": {
+        "score": 1.0,
+        "tool_ok": true,
+        "tool_drifted": false,
+        "got_tool": "get_weather",
+        "arg_score": 1.0,
+        "args_matched": 2,
+        "args_total": 2,
+        "detail": {
+          "location": {
+            "want": "London",
+            "got": "London",
+            "ok": true
+          },
+          "unit": {
+            "want": "celsius",
+            "got": "celsius",
+            "ok": true
+          }
+        }
+      }
+    },
+    {
+      "id": "route-email-basic",
+      "suite": "routing",
+      "prompt": "Send an email to bob@acme.com with the subject 'Q3 Report' letting him know the numbers are ready.",
+      "output": {
+        "subject": "Q3 Report",
+        "body": "The numbers are ready.",
+        "to": "bob@acme.com",
+        "tool": "send_email"
+      },
+      "raw": null,
+      "elapsed": 1.13,
+      "refused": false,
+      "n_leaves": null,
+      "structural_valid": true,
+      "grade": {
+        "score": 1.0,
+        "tool_ok": true,
+        "tool_drifted": false,
+        "got_tool": "send_email",
+        "arg_score": 1.0,
+        "args_matched": 1,
+        "args_total": 1,
+        "detail": {
+          "to": {
+            "want": "bob@acme.com",
+            "got": "bob@acme.com",
+            "ok": true
+          }
+        }
+      }
+    },
+    {
+      "id": "route-email-cc",
+      "suite": "routing",
+      "prompt": "Email alice@corp.io about the launch date slipping to Monday, and CC carol@corp.io and dan@corp.io.",
+      "output": {
+        "subject": "Launch date slipping to Monday",
+        "body": "The launch date is now set for Monday.",
+        "cc": [
+          "carol@corp.io",
+          "dan@corp.io"
+        ],
+        "tool": "send_email",
+        "to": "alice@corp.io"
+      },
+      "raw": null,
+      "elapsed": 1.64,
+      "refused": false,
+      "n_leaves": null,
+      "structural_valid": true,
+      "grade": {
+        "score": 1.0,
+        "tool_ok": true,
+        "tool_drifted": false,
+        "got_tool": "send_email",
+        "arg_score": 1.0,
+        "args_matched": 2,
+        "args_total": 2,
+        "detail": {
+          "to": {
+            "want": "alice@corp.io",
+            "got": "alice@corp.io",
+            "ok": true
+          },
+          "cc": {
+            "want": [
+              "carol@corp.io",
+              "dan@corp.io"
+            ],
+            "got": [
+              "carol@corp.io",
+              "dan@corp.io"
+            ],
+            "ok": true
+          }
+        }
+      }
+    },
+    {
+      "id": "route-event-standup",
+      "suite": "routing",
+      "prompt": "Schedule a 30 minute standup on 2026-06-15 at 9am with the team: lee@x.com and mia@x.com.",
+      "output": {
+        "durationMinutes": 30,
+        "date": "2026-06-15",
+        "tool": "create_event",
+        "startTime": "09:00",
+        "attendees": [
+          "lee@x.com",
+          "mia@x.com"
+        ],
+        "title": "30 minute standup"
+      },
+      "raw": null,
+      "elapsed": 1.6,
+      "refused": false,
+      "n_leaves": null,
+      "structural_valid": true,
+      "grade": {
+        "score": 1.0,
+        "tool_ok": true,
+        "tool_drifted": false,
+        "got_tool": "create_event",
+        "arg_score": 1.0,
+        "args_matched": 4,
+        "args_total": 4,
+        "detail": {
+          "date": {
+            "want": "2026-06-15",
+            "got": "2026-06-15",
+            "ok": true
+          },
+          "startTime": {
+            "want": "09:00",
+            "got": "09:00",
+            "ok": true
+          },
+          "durationMinutes": {
+            "want": 30,
+            "got": 30,
+            "ok": true
+          },
+          "attendees": {
+            "want": [
+              "lee@x.com",
+              "mia@x.com"
+            ],
+            "got": [
+              "lee@x.com",
+              "mia@x.com"
+            ],
+            "ok": true
+          }
+        }
+      }
+    },
+    {
+      "id": "route-event-location",
+      "suite": "routing",
+      "prompt": "Put a 1 hour design review on the calendar for 2026-07-02 at 2:30pm in the Boardroom with jo@x.com.",
+      "output": {
+        "date": "2026-07-02",
+        "startTime": "14:30",
+        "title": "1 hour design review",
+        "location": "Boardroom",
+        "tool": "create_event",
+        "attendees": [
+          "jo@x.com"
+        ],
+        "durationMinutes": 60
+      },
+      "raw": null,
+      "elapsed": 1.52,
+      "refused": false,
+      "n_leaves": null,
+      "structural_valid": true,
+      "grade": {
+        "score": 1.0,
+        "tool_ok": true,
+        "tool_drifted": false,
+        "got_tool": "create_event",
+        "arg_score": 1.0,
+        "args_matched": 4,
+        "args_total": 4,
+        "detail": {
+          "date": {
+            "want": "2026-07-02",
+            "got": "2026-07-02",
+            "ok": true
+          },
+          "startTime": {
+            "want": "14:30",
+            "got": "14:30",
+            "ok": true
+          },
+          "durationMinutes": {
+            "want": 60,
+            "got": 60,
+            "ok": true
+          },
+          "location": {
+            "want": "Boardroom",
+            "got": "Boardroom",
+            "ok": true
+          }
+        }
+      }
+    },
+    {
+      "id": "route-reminder-high",
+      "suite": "routing",
+      "prompt": "Remind me to submit the tax forms on 2026-04-15 at 5pm \u2014 this is really important.",
+      "output": {
+        "tool": "set_reminder",
+        "datetime": "2026-06-10T17:00:00",
+        "priority": "high",
+        "text": "submit the tax forms on 2026-04-15 at 5pm"
+      },
+      "raw": null,
+      "elapsed": 1.62,
+      "refused": false,
+      "n_leaves": null,
+      "structural_valid": true,
+      "grade": {
+        "score": 1.0,
+        "tool_ok": true,
+        "tool_drifted": false,
+        "got_tool": "set_reminder",
+        "arg_score": 1.0,
+        "args_matched": 1,
+        "args_total": 1,
+        "detail": {
+          "priority": {
+            "want": "high",
+            "got": "high",
+            "ok": true
+          }
+        }
+      }
+    },
+    {
+      "id": "route-reminder-low",
+      "suite": "routing",
+      "prompt": "Whenever you get a chance, no rush at all, remind me to water the plants tomorrow.",
+      "output": {
+        "text": "Water the plants tomorrow",
+        "tool": "set_reminder",
+        "datetime": "2026-06-11T00:00:00",
+        "priority": "low"
+      },
+      "raw": null,
+      "elapsed": 1.27,
+      "refused": false,
+      "n_leaves": null,
+      "structural_valid": true,
+      "grade": {
+        "score": 1.0,
+        "tool_ok": true,
+        "tool_drifted": false,
+        "got_tool": "set_reminder",
+        "arg_score": 1.0,
+        "args_matched": 1,
+        "args_total": 1,
+        "detail": {
+          "priority": {
+            "want": "low",
+            "got": "low",
+            "ok": true
+          }
+        }
+      }
+    },
+    {
+      "id": "route-music-shuffle",
+      "suite": "routing",
+      "prompt": "Shuffle some Miles Davis.",
+      "output": {
+        "query": "Miles Davis",
+        "tool": "play_music",
+        "shuffle": true
+      },
+      "raw": null,
+      "elapsed": 0.84,
+      "refused": false,
+      "n_leaves": null,
+      "structural_valid": true,
+      "grade": {
+        "score": 1.0,
+        "tool_ok": true,
+        "tool_drifted": false,
+        "got_tool": "play_music",
+        "arg_score": 1.0,
+        "args_matched": 1,
+        "args_total": 1,
+        "detail": {
+          "shuffle": {
+            "want": true,
+            "got": true,
+            "ok": true
+          }
+        }
+      }
+    },
+    {
+      "id": "route-music-volume",
+      "suite": "routing",
+      "prompt": "Play the album Kind of Blue, no shuffle, and set the volume to 40.",
+      "output": {
+        "shuffle": false,
+        "volume": 40,
+        "query": "Kind of Blue",
+        "tool": "play_music"
+      },
+      "raw": null,
+      "elapsed": 0.97,
+      "refused": false,
+      "n_leaves": null,
+      "structural_valid": true,
+      "grade": {
+        "score": 1.0,
+        "tool_ok": true,
+        "tool_drifted": false,
+        "got_tool": "play_music",
+        "arg_score": 1.0,
+        "args_matched": 2,
+        "args_total": 2,
+        "detail": {
+          "shuffle": {
+            "want": false,
+            "got": false,
+            "ok": true
+          },
+          "volume": {
+            "want": 40,
+            "got": 40,
+            "ok": true
+          }
+        }
+      }
+    },
+    {
+      "id": "route-weather-celsius-implicit",
+      "suite": "routing",
+      "prompt": "How hot is it in Dubai right now? Give it to me in Fahrenheit.",
+      "output": {
+        "tool": "get_weather",
+        "unit": "fahrenheit",
+        "location": "Dubai"
+      },
+      "raw": null,
+      "elapsed": 0.92,
+      "refused": false,
+      "n_leaves": null,
+      "structural_valid": true,
+      "grade": {
+        "score": 1.0,
+        "tool_ok": true,
+        "tool_drifted": false,
+        "got_tool": "get_weather",
+        "arg_score": 1.0,
+        "args_matched": 2,
+        "args_total": 2,
+        "detail": {
+          "location": {
+            "want": "Dubai",
+            "got": "Dubai",
+            "ok": true
+          },
+          "unit": {
+            "want": "fahrenheit",
+            "got": "fahrenheit",
+            "ok": true
+          }
+        }
+      }
+    },
+    {
+      "id": "route-email-meeting",
+      "suite": "routing",
+      "prompt": "Drop sam@startup.dev a note that the meeting moved to 3pm.",
+      "output": {
+        "to": "sam@startup.dev",
+        "subject": "Meeting Update",
+        "tool": "send_email",
+        "body": "The meeting has been moved to 3pm."
+      },
+      "raw": null,
+      "elapsed": 1.15,
+      "refused": false,
+      "n_leaves": null,
+      "structural_valid": true,
+      "grade": {
+        "score": 1.0,
+        "tool_ok": true,
+        "tool_drifted": false,
+        "got_tool": "send_email",
+        "arg_score": 1.0,
+        "args_matched": 1,
+        "args_total": 1,
+        "detail": {
+          "to": {
+            "want": "sam@startup.dev",
+            "got": "sam@startup.dev",
+            "ok": true
+          }
+        }
+      }
+    },
+    {
+      "id": "route-reminder-medium",
+      "suite": "routing",
+      "prompt": "Set a normal-priority reminder to call the plumber on 2026-06-12 at 10am.",
+      "output": {
+        "datetime": "2026-06-12T10:00:00",
+        "text": "call the plumber",
+        "tool": "set_reminder",
+        "priority": "medium"
+      },
+      "raw": null,
+      "elapsed": 1.31,
+      "refused": false,
+      "n_leaves": null,
+      "structural_valid": true,
+      "grade": {
+        "score": 1.0,
+        "tool_ok": true,
+        "tool_drifted": false,
+        "got_tool": "set_reminder",
+        "arg_score": 1.0,
+        "args_matched": 1,
+        "args_total": 1,
+        "detail": {
+          "priority": {
+            "want": "medium",
+            "got": "medium",
+            "ok": true
+          }
+        }
+      }
+    },
+    {
+      "id": "extract-order-mugs",
+      "suite": "extraction",
+      "prompt": "Hi, this is Maria Chen (maria@chen.io, I'm a gold loyalty member). I'd like 3 ceramic mugs at $12.50 each and 2 bags of espresso beans at $18 each. Please rush it overnight.",
+      "output": {
+        "priority": "overnight",
+        "orderId": "12345",
+        "customer": {
+          "vip": true,
+          "email": "maria@chen.io",
+          "name": "Maria Chen"
+        },
+        "items": [
+          {
+            "unitPrice": 12.5,
+            "name": "ceramic mug",
+            "quantity": 3
+          },
+          {
+            "unitPrice": 18,
+            "name": "bags of espresso beans",
+            "quantity": 2
+          }
+        ],
+        "total": 112.5
+      },
+      "raw": null,
+      "elapsed": 1.67,
+      "refused": false,
+      "n_leaves": null,
+      "structural_valid": true,
+      "grade": {
+        "score": 1.0,
+        "fields_matched": 6,
+        "fields_total": 6,
+        "detail": {
+          "customer.name": {
+            "want": "Maria Chen",
+            "got": "Maria Chen",
+            "ok": true
+          },
+          "customer.email": {
+            "want": "maria@chen.io",
+            "got": "maria@chen.io",
+            "ok": true
+          },
+          "customer.vip": {
+            "want": true,
+            "got": true,
+            "ok": true
+          },
+          "items.0.quantity": {
+            "want": 3,
+            "got": 3,
+            "ok": true
+          },
+          "items.1.quantity": {
+            "want": 2,
+            "got": 2,
+            "ok": true
+          },
+          "priority": {
+            "want": "overnight",
+            "got": "overnight",
+            "ok": true
+          }
+        }
+      }
+    },
+    {
+      "id": "extract-order-books",
+      "suite": "extraction",
+      "prompt": "Order for Tom Reyes (tom@reyes.net), not a member. He wants 1 notebook at $4 and 5 pens at $1.50 each. Standard shipping is fine.",
+      "output": {
+        "customer": {
+          "vip": false,
+          "email": "tom@reyes.net",
+          "name": "Tom Reyes"
+        },
+        "items": [
+          {
+            "quantity": 1,
+            "name": "notebook",
+            "unitPrice": 4
+          },
+          {
+            "name": "pen",
+            "unitPrice": 1.5,
+            "quantity": 5
+          }
+        ],
+        "priority": "standard",
+        "total": 14.5,
+        "orderId": "12345"
+      },
+      "raw": null,
+      "elapsed": 1.56,
+      "refused": false,
+      "n_leaves": null,
+      "structural_valid": true,
+      "grade": {
+        "score": 1.0,
+        "fields_matched": 6,
+        "fields_total": 6,
+        "detail": {
+          "customer.name": {
+            "want": "Tom Reyes",
+            "got": "Tom Reyes",
+            "ok": true
+          },
+          "customer.email": {
+            "want": "tom@reyes.net",
+            "got": "tom@reyes.net",
+            "ok": true
+          },
+          "customer.vip": {
+            "want": false,
+            "got": false,
+            "ok": true
+          },
+          "items.0.quantity": {
+            "want": 1,
+            "got": 1,
+            "ok": true
+          },
+          "items.1.quantity": {
+            "want": 5,
+            "got": 5,
+            "ok": true
+          },
+          "priority": {
+            "want": "standard",
+            "got": "standard",
+            "ok": true
+          }
+        }
+      }
+    },
+    {
+      "id": "extract-order-express",
+      "suite": "extraction",
+      "prompt": "Platinum member Dana Park (dana@park.co) needs 4 cables at $9.99 each, shipped express.",
+      "output": {
+        "total": 39.96,
+        "priority": "express",
+        "items": [
+          {
+            "unitPrice": 9.99,
+            "name": "cable",
+            "quantity": 4
+          }
+        ],
+        "orderId": "12345",
+        "customer": {
+          "name": "Dana Park",
+          "vip": true,
+          "email": "dana@park.co"
+        }
+      },
+      "raw": null,
+      "elapsed": 1.32,
+      "refused": false,
+      "n_leaves": null,
+      "structural_valid": true,
+      "grade": {
+        "score": 1.0,
+        "fields_matched": 5,
+        "fields_total": 5,
+        "detail": {
+          "customer.name": {
+            "want": "Dana Park",
+            "got": "Dana Park",
+            "ok": true
+          },
+          "customer.vip": {
+            "want": true,
+            "got": true,
+            "ok": true
+          },
+          "items.0.quantity": {
+            "want": 4,
+            "got": 4,
+            "ok": true
+          },
+          "items.0.unitPrice": {
+            "want": 9.99,
+            "got": 9.99,
+            "ok": true
+          },
+          "priority": {
+            "want": "express",
+            "got": "express",
+            "ok": true
+          }
+        }
+      }
+    },
+    {
+      "id": "extract-profile-eng",
+      "suite": "extraction",
+      "prompt": "Priya Nair is a 34-year-old staff engineer at Northwind, where she's worked for 6 years. She lives in Austin, USA and works remotely. Skills: Python, Rust, and distributed systems.",
+      "output": {
+        "remote": true,
+        "currentJob": {
+          "years": 6,
+          "company": "Northwind",
+          "title": "staff engineer"
+        },
+        "skills": [
+          "Python",
+          "Rust",
+          "distributed systems"
+        ],
+        "address": {
+          "country": "USA",
+          "city": "Austin"
+        },
+        "fullName": "Priya Nair"
+      },
+      "raw": null,
+      "elapsed": 1.12,
+      "refused": false,
+      "n_leaves": null,
+      "structural_valid": true,
+      "grade": {
+        "score": 0.875,
+        "fields_matched": 7,
+        "fields_total": 8,
+        "detail": {
+          "fullName": {
+            "want": "Priya Nair",
+            "got": "Priya Nair",
+            "ok": true
+          },
+          "age": {
+            "want": 34,
+            "got": null,
+            "ok": false
+          },
+          "address.city": {
+            "want": "Austin",
+            "got": "Austin",
+            "ok": true
+          },
+          "address.country": {
+            "want": "USA",
+            "got": "USA",
+            "ok": true
+          },
+          "currentJob.title": {
+            "want": "staff engineer",
+            "got": "staff engineer",
+            "ok": true
+          },
+          "currentJob.company": {
+            "want": "Northwind",
+            "got": "Northwind",
+            "ok": true
+          },
+          "remote": {
+            "want": true,
+            "got": true,
+            "ok": true
+          },
+          "skills": {
+            "want": [
+              "Python",
+              "Rust",
+              "distributed systems"
+            ],
+            "got": [
+              "Python",
+              "Rust",
+              "distributed systems"
+            ],
+            "ok": true
+          }
+        }
+      }
+    },
+    {
+      "id": "extract-profile-designer",
+      "suite": "extraction",
+      "prompt": "Meet Jonah Webb, 28, a product designer at Lumen based in Berlin, Germany. He commutes to the office (not remote). He's skilled in Figma and prototyping.",
+      "output": {
+        "currentJob": {
+          "company": "Lumen",
+          "years": 0,
+          "title": "product designer"
+        },
+        "remote": false,
+        "address": {
+          "city": "Berlin",
+          "country": "Germany"
+        },
+        "age": 28,
+        "skills": [
+          "Figma",
+          "prototyping"
+        ],
+        "fullName": "Jonah Webb"
+      },
+      "raw": null,
+      "elapsed": 1.29,
+      "refused": false,
+      "n_leaves": null,
+      "structural_valid": true,
+      "grade": {
+        "score": 1.0,
+        "fields_matched": 7,
+        "fields_total": 7,
+        "detail": {
+          "fullName": {
+            "want": "Jonah Webb",
+            "got": "Jonah Webb",
+            "ok": true
+          },
+          "age": {
+            "want": 28,
+            "got": 28,
+            "ok": true
+          },
+          "address.city": {
+            "want": "Berlin",
+            "got": "Berlin",
+            "ok": true
+          },
+          "address.country": {
+            "want": "Germany",
+            "got": "Germany",
+            "ok": true
+          },
+          "currentJob.title": {
+            "want": "product designer",
+            "got": "product designer",
+            "ok": true
+          },
+          "currentJob.company": {
+            "want": "Lumen",
+            "got": "Lumen",
+            "ok": true
+          },
+          "remote": {
+            "want": false,
+            "got": false,
+            "ok": true
+          }
+        }
+      }
+    },
+    {
+      "id": "extract-profile-min",
+      "suite": "extraction",
+      "prompt": "Sara Lopez lives in Madrid, Spain. Her skills include teaching and Spanish.",
+      "output": {
+        "address": {
+          "city": "Madrid",
+          "country": "Spain"
+        },
+        "fullName": "Sara Lopez",
+        "remote": false,
+        "skills": [
+          "teaching",
+          "Spanish"
+        ]
+      },
+      "raw": null,
+      "elapsed": 0.85,
+      "refused": false,
+      "n_leaves": null,
+      "structural_valid": true,
+      "grade": {
+        "score": 1.0,
+        "fields_matched": 4,
+        "fields_total": 4,
+        "detail": {
+          "fullName": {
+            "want": "Sara Lopez",
+            "got": "Sara Lopez",
+            "ok": true
+          },
+          "address.city": {
+            "want": "Madrid",
+            "got": "Madrid",
+            "ok": true
+          },
+          "address.country": {
+            "want": "Spain",
+            "got": "Spain",
+            "ok": true
+          },
+          "skills": {
+            "want": [
+              "teaching",
+              "Spanish"
+            ],
+            "got": [
+              "teaching",
+              "Spanish"
+            ],
+            "ok": true
+          }
+        }
+      }
+    },
+    {
+      "id": "extract-recipe-pancakes",
+      "suite": "extraction",
+      "prompt": "Easy pancakes, serves 4. You need 200 g flour, 300 ml milk, and 2 pieces of egg. Steps: mix everything, then cook on a griddle. About 350 calories and 9 grams of protein per serving.",
+      "output": {
+        "steps": [
+          "mix everything",
+          "cook on a griddle"
+        ],
+        "ingredients": [
+          {
+            "amount": 200,
+            "item": "flour",
+            "unit": "g"
+          },
+          {
+            "unit": "ml",
+            "item": "milk",
+            "amount": 300
+          },
+          {
+            "unit": "piece",
+            "item": "egg",
+            "amount": 2
+          }
+        ],
+        "nutrition": {
+          "calories": 350,
+          "protein": 9
+        },
+        "difficulty": "easy",
+        "servings": 4,
+        "name": "Easy pancakes"
+      },
+      "raw": null,
+      "elapsed": 1.73,
+      "refused": false,
+      "n_leaves": null,
+      "structural_valid": true,
+      "grade": {
+        "score": 0.875,
+        "fields_matched": 7,
+        "fields_total": 8,
+        "detail": {
+          "name": {
+            "want": "pancakes",
+            "got": "Easy pancakes",
+            "ok": false
+          },
+          "servings": {
+            "want": 4,
+            "got": 4,
+            "ok": true
+          },
+          "difficulty": {
+            "want": "easy",
+            "got": "easy",
+            "ok": true
+          },
+          "ingredients.0.item": {
+            "want": "flour",
+            "got": "flour",
+            "ok": true
+          },
+          "ingredients.0.amount": {
+            "want": 200,
+            "got": 200,
+            "ok": true
+          },
+          "ingredients.0.unit": {
+            "want": "g",
+            "got": "g",
+            "ok": true
+          },
+          "nutrition.calories": {
+            "want": 350,
+            "got": 350,
+            "ok": true
+          },
+          "nutrition.protein": {
+            "want": 9,
+            "got": 9,
+            "ok": true
+          }
+        }
+      }
+    },
+    {
+      "id": "extract-recipe-smoothie",
+      "suite": "extraction",
+      "prompt": "A hard-difficulty green smoothie for 2. Blend 250 ml water, 1 cup spinach, and 1 piece banana. Just blend until smooth.",
+      "output": {
+        "ingredients": [
+          {
+            "unit": "ml",
+            "amount": 250,
+            "item": "water"
+          },
+          {
+            "item": "spinach",
+            "unit": "cup",
+            "amount": 1
+          },
+          {
+            "amount": 1,
+            "item": "banana",
+            "unit": "piece"
+          }
+        ],
+        "difficulty": "hard",
+        "servings": 2,
+        "steps": [
+          "Blend until smooth"
+        ],
+        "name": "green smoothie"
+      },
+      "raw": null,
+      "elapsed": 1.47,
+      "refused": false,
+      "n_leaves": null,
+      "structural_valid": true,
+      "grade": {
+        "score": 1.0,
+        "fields_matched": 6,
+        "fields_total": 6,
+        "detail": {
+          "name": {
+            "want": "green smoothie",
+            "got": "green smoothie",
+            "ok": true
+          },
+          "servings": {
+            "want": 2,
+            "got": 2,
+            "ok": true
+          },
+          "difficulty": {
+            "want": "hard",
+            "got": "hard",
+            "ok": true
+          },
+          "ingredients.1.item": {
+            "want": "spinach",
+            "got": "spinach",
+            "ok": true
+          },
+          "ingredients.1.amount": {
+            "want": 1,
+            "got": 1,
+            "ok": true
+          },
+          "ingredients.1.unit": {
+            "want": "cup",
+            "got": "cup",
+            "ok": true
+          }
+        }
+      }
+    },
+    {
+      "id": "const-weather-kelvin",
+      "suite": "constraints",
+      "prompt": "Weather in Berlin in Kelvin, please. No rush.",
+      "output": {
+        "location": "Berlin",
+        "tool": "get_weather",
+        "urgency": "low",
+        "unit": "celsius"
+      },
+      "raw": null,
+      "elapsed": 0.6,
+      "refused": false,
+      "n_leaves": null,
+      "structural_valid": true,
+      "grade": {
+        "score": 1.0,
+        "compliant": true,
+        "violations": [],
+        "correctness": true
+      }
+    },
+    {
+      "id": "const-weather-reaumur",
+      "suite": "constraints",
+      "prompt": "Give me Rome's temperature in degrees Reaumur. It's somewhat urgent.",
+      "output": {
+        "tool": "get_weather",
+        "urgency": "high",
+        "unit": "celsius",
+        "location": "Rome"
+      },
+      "raw": null,
+      "elapsed": 0.62,
+      "refused": false,
+      "n_leaves": null,
+      "structural_valid": true,
+      "grade": {
+        "score": 1.0,
+        "compliant": true,
+        "violations": [],
+        "correctness": null
+      }
+    },
+    {
+      "id": "const-weather-urgent-f",
+      "suite": "constraints",
+      "prompt": "URGENT: what's the weather in Oslo? Use Fahrenheit.",
+      "output": {
+        "unit": "fahrenheit",
+        "tool": "get_weather",
+        "urgency": "high",
+        "location": "Oslo"
+      },
+      "raw": null,
+      "elapsed": 0.65,
+      "refused": false,
+      "n_leaves": null,
+      "structural_valid": true,
+      "grade": {
+        "score": 1.0,
+        "compliant": true,
+        "violations": [],
+        "correctness": true
+      }
+    },
+    {
+      "id": "const-weather-rankine",
+      "suite": "constraints",
+      "prompt": "Tokyo weather in Rankine, normal priority.",
+      "output": {
+        "urgency": "normal",
+        "location": "Tokyo",
+        "unit": "fahrenheit",
+        "tool": "get_weather"
+      },
+      "raw": null,
+      "elapsed": 0.61,
+      "refused": false,
+      "n_leaves": null,
+      "structural_valid": true,
+      "grade": {
+        "score": 1.0,
+        "compliant": true,
+        "violations": [],
+        "correctness": null
+      }
+    },
+    {
+      "id": "const-ticket-sev1",
+      "suite": "constraints",
+      "prompt": "Critical production outage \u2014 the primary database is completely down and nobody has started on it yet.",
+      "output": {
+        "tool": "create_ticket",
+        "status": "open",
+        "title": "Critical production outage \u2014 the primary database is completely down and nobody has started on it yet.",
+        "component": "database",
+        "severity": "sev1"
+      },
+      "raw": null,
+      "elapsed": 0.92,
+      "refused": false,
+      "n_leaves": null,
+      "structural_valid": true,
+      "grade": {
+        "score": 1.0,
+        "compliant": true,
+        "violations": [],
+        "correctness": true
+      }
+    },
+    {
+      "id": "const-ticket-cosmetic",
+      "suite": "constraints",
+      "prompt": "Tiny cosmetic thing: a button on the frontend is 2px off. Someone is already poking at it.",
+      "output": {
+        "severity": "sev4",
+        "component": "frontend",
+        "tool": "create_ticket",
+        "status": "open",
+        "title": "Tiny cosmetic thing: a button on the frontend is 2px off. Someone is already poking at it."
+      },
+      "raw": null,
+      "elapsed": 0.93,
+      "refused": false,
+      "n_leaves": null,
+      "structural_valid": true,
+      "grade": {
+        "score": 1.0,
+        "compliant": true,
+        "violations": [],
+        "correctness": false
+      }
+    },
+    {
+      "id": "const-ticket-auth-blocked",
+      "suite": "constraints",
+      "prompt": "Login is broken for everyone \u2014 auth service is throwing 500s. We're blocked waiting on the vendor.",
+      "output": {
+        "severity": "sev1",
+        "tool": "create_ticket",
+        "status": "open",
+        "component": "auth",
+        "title": "Login outage: auth service throwing 500s"
+      },
+      "raw": null,
+      "elapsed": 0.88,
+      "refused": false,
+      "n_leaves": null,
+      "structural_valid": true,
+      "grade": {
+        "score": 1.0,
+        "compliant": true,
+        "violations": [],
+        "correctness": true
+      }
+    },
+    {
+      "id": "const-ticket-fake-component",
+      "suite": "constraints",
+      "prompt": "Our blockchain quantum module has a glitch in the frontend rendering, currently open.",
+      "output": {
+        "tool": "create_ticket",
+        "title": "Frontend rendering glitch in blockchain quantum module",
+        "status": "open",
+        "component": "frontend",
+        "severity": "sev1"
+      },
+      "raw": null,
+      "elapsed": 0.81,
+      "refused": false,
+      "n_leaves": null,
+      "structural_valid": true,
+      "grade": {
+        "score": 1.0,
+        "compliant": true,
+        "violations": [],
+        "correctness": null
+      }
+    },
+    {
+      "id": "const-ticket-fake-status",
+      "suite": "constraints",
+      "prompt": "Backend bug, please set the status to 'pending-review-by-committee'. It's a sev3.",
+      "output": {
+        "severity": "sev3",
+        "status": "open",
+        "component": "backend",
+        "tool": "create_ticket",
+        "title": "Backend bug"
+      },
+      "raw": null,
+      "elapsed": 0.76,
+      "refused": false,
+      "n_leaves": null,
+      "structural_valid": true,
+      "grade": {
+        "score": 1.0,
+        "compliant": true,
+        "violations": [],
+        "correctness": true
+      }
+    },
+    {
+      "id": "const-ticket-infra",
+      "suite": "constraints",
+      "prompt": "The Kubernetes cluster keeps restarting pods \u2014 infra issue, in progress, fairly serious but not an outage.",
+      "output": {
+        "status": "in_progress",
+        "component": "infra",
+        "tool": "create_ticket",
+        "title": "Kubernetes cluster restarting pods",
+        "severity": "sev3"
+      },
+      "raw": null,
+      "elapsed": 0.83,
+      "refused": false,
+      "n_leaves": null,
+      "structural_valid": true,
+      "grade": {
+        "score": 1.0,
+        "compliant": true,
+        "violations": [],
+        "correctness": true
+      }
+    },
+    {
+      "id": "const-weather-celsius-clear",
+      "suite": "constraints",
+      "prompt": "What's it like in Reykjavik? Celsius is fine, low urgency.",
+      "output": {
+        "urgency": "low",
+        "location": "Reykjavik",
+        "tool": "get_weather",
+        "unit": "celsius"
+      },
+      "raw": null,
+      "elapsed": 0.54,
+      "refused": false,
+      "n_leaves": null,
+      "structural_valid": true,
+      "grade": {
+        "score": 1.0,
+        "compliant": true,
+        "violations": [],
+        "correctness": true
+      }
+    },
+    {
+      "id": "const-ticket-closed",
+      "suite": "constraints",
+      "prompt": "That database connection-pool bug from last week is fixed and shipped \u2014 close it. It was a sev2.",
+      "output": {
+        "severity": "sev2",
+        "component": "database",
+        "tool": "create_ticket",
+        "title": "Database connection-pool bug fix",
+        "status": "closed"
+      },
+      "raw": null,
+      "elapsed": 0.84,
+      "refused": false,
+      "n_leaves": null,
+      "structural_valid": true,
+      "grade": {
+        "score": 1.0,
+        "compliant": true,
+        "violations": [],
+        "correctness": true
+      }
+    },
+    {
+      "id": "const-weather-made-up-unit",
+      "suite": "constraints",
+      "prompt": "Weather in Cairo in 'smoots', high urgency.",
+      "output": {
+        "urgency": "high",
+        "location": "Cairo",
+        "unit": "celsius",
+        "tool": "get_weather"
+      },
+      "raw": null,
+      "elapsed": 0.6,
+      "refused": false,
+      "n_leaves": null,
+      "structural_valid": true,
+      "grade": {
+        "score": 1.0,
+        "compliant": true,
+        "violations": [],
+        "correctness": true
+      }
+    },
+    {
+      "id": "const-ticket-frontend-sev4",
+      "suite": "constraints",
+      "prompt": "Purely cosmetic: a tooltip on the frontend has a typo. Nobody's looking at it yet.",
+      "output": {
+        "title": "Tooltip typo on frontend",
+        "tool": "create_ticket",
+        "status": "open",
+        "severity": "sev4",
+        "component": "frontend"
+      },
+      "raw": null,
+      "elapsed": 0.78,
+      "refused": false,
+      "n_leaves": null,
+      "structural_valid": true,
+      "grade": {
+        "score": 1.0,
+        "compliant": true,
+        "violations": [],
+        "correctness": true
+      }
+    },
+    {
+      "id": "fail-math-mugs",
+      "suite": "failure_modes",
+      "prompt": "Order: 3 ceramic mugs at $12.50 each and 2 bags of espresso beans at $18.00 each, standard shipping, for Ana Diaz (ana@d.io), member.",
+      "output": null,
+      "raw": "",
+      "elapsed": 0.12,
+      "refused": true,
+      "n_leaves": null,
+      "structural_valid": false,
+      "grade": {
+        "score": 0.0,
+        "refused": true
+      }
+    },
+    {
+      "id": "fail-math-pens",
+      "suite": "failure_modes",
+      "prompt": "Order for Ken Ito (ken@ito.jp), not a member: 1 notebook at $4.00 and 5 pens at $1.50 each. Standard.",
+      "output": {
+        "customer": {
+          "name": "Ken Ito",
+          "email": "ken@ito.jp",
+          "vip": false
+        },
+        "total": 11.5,
+        "priority": "standard",
+        "orderId": "12345",
+        "items": [
+          {
+            "name": "notebook",
+            "unitPrice": 4,
+            "quantity": 1
+          },
+          {
+            "unitPrice": 1.5,
+            "quantity": 5,
+            "name": "pen"
+          }
+        ]
+      },
+      "raw": null,
+      "elapsed": 1.58,
+      "refused": false,
+      "n_leaves": null,
+      "structural_valid": true,
+      "grade": {
+        "kind": "arithmetic",
+        "got": 11.5,
+        "correct_value": 11.5,
+        "model_correct": true,
+        "score": 1.0
+      }
+    },
+    {
+      "id": "fail-math-cables",
+      "suite": "failure_modes",
+      "prompt": "Liv Berg (liv@berg.se), member: 4 USB-C cables at $9.99 each, express.",
+      "output": {
+        "customer": {
+          "name": "Liv Berg",
+          "email": "liv@berg.se",
+          "vip": false
+        },
+        "orderId": "12345",
+        "items": [
+          {
+            "quantity": 4,
+            "name": "USB-C cable",
+            "unitPrice": 9.99
+          }
+        ],
+        "priority": "express",
+        "total": 39.96
+      },
+      "raw": null,
+      "elapsed": 1.29,
+      "refused": false,
+      "n_leaves": null,
+      "structural_valid": true,
+      "grade": {
+        "kind": "arithmetic",
+        "got": 39.96,
+        "correct_value": 39.96,
+        "model_correct": true,
+        "score": 1.0
+      }
+    },
+    {
+      "id": "fail-math-mixed",
+      "suite": "failure_modes",
+      "prompt": "Order for Omar Said (omar@said.eg), member: 6 tiles at $7.25 each and 3 grout tubs at $2.40 each, overnight.",
+      "output": {
+        "total": 47.25,
+        "customer": {
+          "name": "Omar Said",
+          "email": "omar@said.eg",
+          "vip": false
+        },
+        "items": [
+          {
+            "name": "tile",
+            "unitPrice": 7.25,
+            "quantity": 6
+          },
+          {
+            "unitPrice": 2.4,
+            "quantity": 3,
+            "name": "grout tub"
+          }
+        ],
+        "orderId": "12345",
+        "priority": "overnight"
+      },
+      "raw": null,
+      "elapsed": 1.72,
+      "refused": false,
+      "n_leaves": null,
+      "structural_valid": true,
+      "grade": {
+        "kind": "arithmetic",
+        "got": 47.25,
+        "correct_value": 50.7,
+        "model_correct": false,
+        "score": 0.0
+      }
+    },
+    {
+      "id": "fail-math-decimals",
+      "suite": "failure_modes",
+      "prompt": "For Rosa Lim (rosa@lim.ph), not a member: 2 frames at $15.00 and 7 prints at $3.33 each, standard.",
+      "output": {
+        "items": [
+          {
+            "unitPrice": 15,
+            "name": "frame",
+            "quantity": 2
+          },
+          {
+            "unitPrice": 3.33,
+            "quantity": 7,
+            "name": "print"
+          }
+        ],
+        "total": 66.67,
+        "orderId": "12345",
+        "customer": {
+          "name": "Rosa Lim",
+          "email": "rosa@lim.ph",
+          "vip": false
+        },
+        "priority": "standard"
+      },
+      "raw": null,
+      "elapsed": 1.66,
+      "refused": false,
+      "n_leaves": null,
+      "structural_valid": true,
+      "grade": {
+        "kind": "arithmetic",
+        "got": 66.67,
+        "correct_value": 53.31,
+        "model_correct": false,
+        "score": 0.0
+      }
+    },
+    {
+      "id": "fail-notool-haiku",
+      "suite": "failure_modes",
+      "prompt": "Write me a haiku about the ocean.",
+      "output": {
+        "message": "Waves whisper secrets deep, the ocean cradles silence.",
+        "tool": "respond_directly"
+      },
+      "raw": null,
+      "elapsed": 1.14,
+      "refused": false,
+      "n_leaves": null,
+      "structural_valid": true,
+      "grade": {
+        "kind": "no_tool",
+        "got_tool": "respond_directly",
+        "used_escape": true,
+        "score": 1.0
+      }
+    },
+    {
+      "id": "fail-notool-meaning",
+      "suite": "failure_modes",
+      "prompt": "What do you think is the meaning of life?",
+      "output": {
+        "tool": "respond_directly",
+        "message": "The meaning of life is subjective and varies for each individual. What matters most is how we live and connect with others."
+      },
+      "raw": null,
+      "elapsed": 1.45,
+      "refused": false,
+      "n_leaves": null,
+      "structural_valid": true,
+      "grade": {
+        "kind": "no_tool",
+        "got_tool": "respond_directly",
+        "used_escape": true,
+        "score": 1.0
+      }
+    },
+    {
+      "id": "fail-notool-translate",
+      "suite": "failure_modes",
+      "prompt": "How do you say 'good morning' in French?",
+      "output": {
+        "message": "Bonjour",
+        "tool": "respond_directly"
+      },
+      "raw": null,
+      "elapsed": 0.93,
+      "refused": false,
+      "n_leaves": null,
+      "structural_valid": true,
+      "grade": {
+        "kind": "no_tool",
+        "got_tool": "respond_directly",
+        "used_escape": true,
+        "score": 1.0
+      }
+    },
+    {
+      "id": "fail-notool-joke",
+      "suite": "failure_modes",
+      "prompt": "Tell me a joke about computers.",
+      "output": {
+        "tool": "respond_directly",
+        "message": "Why did the computer go to school? To improve its RAM!"
+      },
+      "raw": null,
+      "elapsed": 1.17,
+      "refused": false,
+      "n_leaves": null,
+      "structural_valid": true,
+      "grade": {
+        "kind": "no_tool",
+        "got_tool": "respond_directly",
+        "used_escape": true,
+        "score": 1.0
+      }
+    },
+    {
+      "id": "fail-notool-recommend",
+      "suite": "failure_modes",
+      "prompt": "Can you recommend a good science fiction novel?",
+      "output": {
+        "tool": "respond_directly",
+        "message": "I recommend *Dune* by Frank Herbert."
+      },
+      "raw": null,
+      "elapsed": 1.15,
+      "refused": false,
+      "n_leaves": null,
+      "structural_valid": true,
+      "grade": {
+        "kind": "no_tool",
+        "got_tool": "respond_directly",
+        "used_escape": true,
+        "score": 1.0
+      }
+    },
+    {
+      "id": "big-args-005",
+      "suite": "big_args",
+      "prompt": "<5 fields>",
+      "output": null,
+      "raw": null,
+      "elapsed": 0.88,
+      "refused": false,
+      "n_leaves": 5,
+      "structural_valid": true,
+      "grade": {
+        "score": 1.0,
+        "fields_matched": 5,
+        "fields_total": 5,
+        "detail": {
+          "record_id": {
+            "want": "val-0",
+            "got": "val-0",
+            "ok": true
+          },
+          "title": {
+            "want": "val-1",
+            "got": "val-1",
+            "ok": true
+          },
+          "meta.priority": {
+            "want": "high",
+            "got": "high",
+            "ok": true
+          },
+          "meta.status": {
+            "want": "archived",
+            "got": "archived",
+            "ok": true
+          },
+          "meta.urgent": {
+            "want": true,
+            "got": true,
+            "ok": true
+          }
+        }
+      }
+    },
+    {
+      "id": "big-args-010",
+      "suite": "big_args",
+      "prompt": "<10 fields>",
+      "output": null,
+      "raw": null,
+      "elapsed": 1.61,
+      "refused": false,
+      "n_leaves": 10,
+      "structural_valid": true,
+      "grade": {
+        "score": 1.0,
+        "fields_matched": 10,
+        "fields_total": 10,
+        "detail": {
+          "record_id": {
+            "want": "val-0",
+            "got": "val-0",
+            "ok": true
+          },
+          "title": {
+            "want": "val-1",
+            "got": "val-1",
+            "ok": true
+          },
+          "meta.priority": {
+            "want": "high",
+            "got": "high",
+            "ok": true
+          },
+          "meta.status": {
+            "want": "archived",
+            "got": "archived",
+            "ok": true
+          },
+          "meta.urgent": {
+            "want": true,
+            "got": true,
+            "ok": true
+          },
+          "meta.version": {
+            "want": 35,
+            "got": 35,
+            "ok": true
+          },
+          "profile.contact.email": {
+            "want": "val-6",
+            "got": "val-6",
+            "ok": true
+          },
+          "profile.contact.phone": {
+            "want": "val-7",
+            "got": "val-7",
+            "ok": true
+          },
+          "profile.address.city": {
+            "want": "val-8",
+            "got": "val-8",
+            "ok": true
+          },
+          "profile.address.country": {
+            "want": "val-9",
+            "got": "val-9",
+            "ok": true
+          }
+        }
+      }
+    },
+    {
+      "id": "big-args-025",
+      "suite": "big_args",
+      "prompt": "<25 fields>",
+      "output": null,
+      "raw": null,
+      "elapsed": 3.43,
+      "refused": false,
+      "n_leaves": 25,
+      "structural_valid": true,
+      "grade": {
+        "score": 1.0,
+        "fields_matched": 25,
+        "fields_total": 25,
+        "detail": {
+          "record_id": {
+            "want": "val-0",
+            "got": "val-0",
+            "ok": true
+          },
+          "title": {
+            "want": "val-1",
+            "got": "val-1",
+            "ok": true
+          },
+          "meta.priority": {
+            "want": "high",
+            "got": "high",
+            "ok": true
+          },
+          "meta.status": {
+            "want": "archived",
+            "got": "archived",
+            "ok": true
+          },
+          "meta.urgent": {
+            "want": true,
+            "got": true,
+            "ok": true
+          },
+          "meta.version": {
+            "want": 35,
+            "got": 35,
+            "ok": true
+          },
+          "profile.contact.email": {
+            "want": "val-6",
+            "got": "val-6",
+            "ok": true
+          },
+          "profile.contact.phone": {
+            "want": "val-7",
+            "got": "val-7",
+            "ok": true
+          },
+          "profile.address.city": {
+            "want": "val-8",
+            "got": "val-8",
+            "ok": true
+          },
+          "profile.address.country": {
+            "want": "val-9",
+            "got": "val-9",
+            "ok": true
+          },
+          "profile.address.postalCode": {
+            "want": "val-10",
+            "got": "val-10",
+            "ok": true
+          },
+          "deep.outer.middle.inner.value": {
+            "want": "val-11",
+            "got": "val-11",
+            "ok": true
+          },
+          "deep.outer.middle.inner.count": {
+            "want": 84,
+            "got": 84,
+            "ok": true
+          },
+          "sections.0.name": {
+            "want": "val-13",
+            "got": "val-13",
+            "ok": true
+          },
+          "sections.0.score": {
+            "want": 98,
+            "got": 98,
+            "ok": true
+          },
+          "sections.0.ok": {
+            "want": false,
+            "got": false,
+            "ok": true
+          },
+          "sections.1.name": {
+            "want": "val-16",
+            "got": "val-16",
+            "ok": true
+          },
+          "sections.1.score": {
+            "want": 19,
+            "got": 19,
+            "ok": true
+          },
+          "sections.1.ok": {
+            "want": true,
+            "got": true,
+            "ok": true
+          },
+          "sections.2.name": {
+            "want": "val-19",
+            "got": "val-19",
+            "ok": true
+          },
+          "sections.2.score": {
+            "want": 40,
+            "got": 40,
+            "ok": true
+          },
+          "sections.2.ok": {
+            "want": false,
+            "got": false,
+            "ok": true
+          },
+          "sections.3.name": {
+            "want": "val-22",
+            "got": "val-22",
+            "ok": true
+          },
+          "sections.3.score": {
+            "want": 61,
+            "got": 61,
+            "ok": true
+          },
+          "sections.3.ok": {
+            "want": true,
+            "got": true,
+            "ok": true
+          }
+        }
+      }
+    },
+    {
+      "id": "big-args-050",
+      "suite": "big_args",
+      "prompt": "<50 fields>",
+      "output": null,
+      "raw": null,
+      "elapsed": 6.26,
+      "refused": false,
+      "n_leaves": 50,
+      "structural_valid": true,
+      "grade": {
+        "score": 0.98,
+        "fields_matched": 49,
+        "fields_total": 50,
+        "detail": {
+          "record_id": {
+            "want": "val-0",
+            "got": "val-0",
+            "ok": true
+          },
+          "title": {
+            "want": "val-1",
+            "got": "val-1",
+            "ok": true
+          },
+          "meta.priority": {
+            "want": "high",
+            "got": "high",
+            "ok": true
+          },
+          "meta.status": {
+            "want": "archived",
+            "got": "archived",
+            "ok": true
+          },
+          "meta.urgent": {
+            "want": true,
+            "got": true,
+            "ok": true
+          },
+          "meta.version": {
+            "want": 35,
+            "got": 35,
+            "ok": true
+          },
+          "profile.contact.email": {
+            "want": "val-6",
+            "got": "val-6",
+            "ok": true
+          },
+          "profile.contact.phone": {
+            "want": "val-7",
+            "got": "val-7",
+            "ok": true
+          },
+          "profile.address.city": {
+            "want": "val-8",
+            "got": "val-8",
+            "ok": true
+          },
+          "profile.address.country": {
+            "want": "val-9",
+            "got": "val-9",
+            "ok": true
+          },
+          "profile.address.postalCode": {
+            "want": "val-10",
+            "got": "val-10",
+            "ok": true
+          },
+          "deep.outer.middle.inner.value": {
+            "want": "val-11",
+            "got": "val-11",
+            "ok": true
+          },
+          "deep.outer.middle.inner.count": {
+            "want": 84,
+            "got": 84,
+            "ok": true
+          },
+          "sections.0.name": {
+            "want": "val-13",
+            "got": "val-13",
+            "ok": true
+          },
+          "sections.0.score": {
+            "want": 98,
+            "got": 98,
+            "ok": true
+          },
+          "sections.0.ok": {
+            "want": false,
+            "got": false,
+            "ok": true
+          },
+          "sections.1.name": {
+            "want": "val-16",
+            "got": "val-16",
+            "ok": true
+          },
+          "sections.1.score": {
+            "want": 19,
+            "got": 19,
+            "ok": true
+          },
+          "sections.1.ok": {
+            "want": true,
+            "got": true,
+            "ok": true
+          },
+          "sections.2.name": {
+            "want": "val-19",
+            "got": "val-19",
+            "ok": true
+          },
+          "sections.2.score": {
+            "want": 40,
+            "got": 40,
+            "ok": true
+          },
+          "sections.2.ok": {
+            "want": false,
+            "got": false,
+            "ok": true
+          },
+          "sections.3.name": {
+            "want": "val-22",
+            "got": "val-22",
+            "ok": true
+          },
+          "sections.3.score": {
+            "want": 61,
+            "got": 61,
+            "ok": true
+          },
+          "sections.3.ok": {
+            "want": true,
+            "got": true,
+            "ok": true
+          },
+          "sections.4.name": {
+            "want": "val-25",
+            "got": "val-25",
+            "ok": true
+          },
+          "sections.4.score": {
+            "want": 82,
+            "got": 82,
+            "ok": true
+          },
+          "sections.4.ok": {
+            "want": false,
+            "got": false,
+            "ok": true
+          },
+          "sections.5.name": {
+            "want": "val-28",
+            "got": "val-28",
+            "ok": true
+          },
+          "sections.5.score": {
+            "want": 3,
+            "got": 3,
+            "ok": true
+          },
+          "sections.5.ok": {
+            "want": true,
+            "got": true,
+            "ok": true
+          },
+          "sections.6.name": {
+            "want": "val-31",
+            "got": "val-31",
+            "ok": true
+          },
+          "sections.6.score": {
+            "want": 24,
+            "got": 24,
+            "ok": true
+          },
+          "sections.6.ok": {
+            "want": false,
+            "got": false,
+            "ok": true
+          },
+          "sections.7.name": {
+            "want": "val-34",
+            "got": "val-34",
+            "ok": true
+          },
+          "sections.7.score": {
+            "want": 45,
+            "got": 45,
+            "ok": true
+          },
+          "sections.7.ok": {
+            "want": true,
+            "got": true,
+            "ok": true
+          },
+          "sections.8.name": {
+            "want": "val-37",
+            "got": "val-37",
+            "ok": true
+          },
+          "sections.8.score": {
+            "want": 66,
+            "got": 66,
+            "ok": true
+          },
+          "sections.8.ok": {
+            "want": false,
+            "got": false,
+            "ok": true
+          },
+          "sections.9.name": {
+            "want": "val-40",
+            "got": "val-40",
+            "ok": true
+          },
+          "sections.9.score": {
+            "want": 87,
+            "got": 87,
+            "ok": true
+          },
+          "sections.9.ok": {
+            "want": true,
+            "got": true,
+            "ok": true
+          },
+          "sections.10.name": {
+            "want": "val-43",
+            "got": "val-43",
+            "ok": true
+          },
+          "sections.10.score": {
+            "want": 8,
+            "got": 8,
+            "ok": true
+          },
+          "sections.10.ok": {
+            "want": false,
+            "got": false,
+            "ok": true
+          },
+          "sections.11.name": {
+            "want": "val-46",
+            "got": "val-46",
+            "ok": true
+          },
+          "sections.11.score": {
+            "want": 29,
+            "got": 29,
+            "ok": true
+          },
+          "sections.11.ok": {
+            "want": true,
+            "got": true,
+            "ok": true
+          },
+          "attributes.attr_0": {
+            "want": "val-49",
+            "got": "val-52",
+            "ok": false
+          }
+        }
+      }
+    },
+    {
+      "id": "big-args-075",
+      "suite": "big_args",
+      "prompt": "<75 fields>",
+      "output": null,
+      "raw": null,
+      "elapsed": 13.42,
+      "refused": false,
+      "n_leaves": 75,
+      "structural_valid": true,
+      "grade": {
+        "score": 1.0,
+        "fields_matched": 75,
+        "fields_total": 75,
+        "detail": {
+          "record_id": {
+            "want": "val-0",
+            "got": "val-0",
+            "ok": true
+          },
+          "title": {
+            "want": "val-1",
+            "got": "val-1",
+            "ok": true
+          },
+          "meta.priority": {
+            "want": "high",
+            "got": "high",
+            "ok": true
+          },
+          "meta.status": {
+            "want": "archived",
+            "got": "archived",
+            "ok": true
+          },
+          "meta.urgent": {
+            "want": true,
+            "got": true,
+            "ok": true
+          },
+          "meta.version": {
+            "want": 35,
+            "got": 35,
+            "ok": true
+          },
+          "profile.contact.email": {
+            "want": "val-6",
+            "got": "val-6",
+            "ok": true
+          },
+          "profile.contact.phone": {
+            "want": "val-7",
+            "got": "val-7",
+            "ok": true
+          },
+          "profile.address.city": {
+            "want": "val-8",
+            "got": "val-8",
+            "ok": true
+          },
+          "profile.address.country": {
+            "want": "val-9",
+            "got": "val-9",
+            "ok": true
+          },
+          "profile.address.postalCode": {
+            "want": "val-10",
+            "got": "val-10",
+            "ok": true
+          },
+          "deep.outer.middle.inner.value": {
+            "want": "val-11",
+            "got": "val-11",
+            "ok": true
+          },
+          "deep.outer.middle.inner.count": {
+            "want": 84,
+            "got": 84,
+            "ok": true
+          },
+          "sections.0.name": {
+            "want": "val-13",
+            "got": "val-13",
+            "ok": true
+          },
+          "sections.0.score": {
+            "want": 98,
+            "got": 98,
+            "ok": true
+          },
+          "sections.0.ok": {
+            "want": false,
+            "got": false,
+            "ok": true
+          },
+          "sections.1.name": {
+            "want": "val-16",
+            "got": "val-16",
+            "ok": true
+          },
+          "sections.1.score": {
+            "want": 19,
+            "got": 19,
+            "ok": true
+          },
+          "sections.1.ok": {
+            "want": true,
+            "got": true,
+            "ok": true
+          },
+          "sections.2.name": {
+            "want": "val-19",
+            "got": "val-19",
+            "ok": true
+          },
+          "sections.2.score": {
+            "want": 40,
+            "got": 40,
+            "ok": true
+          },
+          "sections.2.ok": {
+            "want": false,
+            "got": false,
+            "ok": true
+          },
+          "sections.3.name": {
+            "want": "val-22",
+            "got": "val-22",
+            "ok": true
+          },
+          "sections.3.score": {
+            "want": 61,
+            "got": 61,
+            "ok": true
+          },
+          "sections.3.ok": {
+            "want": true,
+            "got": true,
+            "ok": true
+          },
+          "sections.4.name": {
+            "want": "val-25",
+            "got": "val-25",
+            "ok": true
+          },
+          "sections.4.score": {
+            "want": 82,
+            "got": 82,
+            "ok": true
+          },
+          "sections.4.ok": {
+            "want": false,
+            "got": false,
+            "ok": true
+          },
+          "sections.5.name": {
+            "want": "val-28",
+            "got": "val-28",
+            "ok": true
+          },
+          "sections.5.score": {
+            "want": 3,
+            "got": 3,
+            "ok": true
+          },
+          "sections.5.ok": {
+            "want": true,
+            "got": true,
+            "ok": true
+          },
+          "sections.6.name": {
+            "want": "val-31",
+            "got": "val-31",
+            "ok": true
+          },
+          "sections.6.score": {
+            "want": 24,
+            "got": 24,
+            "ok": true
+          },
+          "sections.6.ok": {
+            "want": false,
+            "got": false,
+            "ok": true
+          },
+          "sections.7.name": {
+            "want": "val-34",
+            "got": "val-34",
+            "ok": true
+          },
+          "sections.7.score": {
+            "want": 45,
+            "got": 45,
+            "ok": true
+          },
+          "sections.7.ok": {
+            "want": true,
+            "got": true,
+            "ok": true
+          },
+          "sections.8.name": {
+            "want": "val-37",
+            "got": "val-37",
+            "ok": true
+          },
+          "sections.8.score": {
+            "want": 66,
+            "got": 66,
+            "ok": true
+          },
+          "sections.8.ok": {
+            "want": false,
+            "got": false,
+            "ok": true
+          },
+          "sections.9.name": {
+            "want": "val-40",
+            "got": "val-40",
+            "ok": true
+          },
+          "sections.9.score": {
+            "want": 87,
+            "got": 87,
+            "ok": true
+          },
+          "sections.9.ok": {
+            "want": true,
+            "got": true,
+            "ok": true
+          },
+          "sections.10.name": {
+            "want": "val-43",
+            "got": "val-43",
+            "ok": true
+          },
+          "sections.10.score": {
+            "want": 8,
+            "got": 8,
+            "ok": true
+          },
+          "sections.10.ok": {
+            "want": false,
+            "got": false,
+            "ok": true
+          },
+          "sections.11.name": {
+            "want": "val-46",
+            "got": "val-46",
+            "ok": true
+          },
+          "sections.11.score": {
+            "want": 29,
+            "got": 29,
+            "ok": true
+          },
+          "sections.11.ok": {
+            "want": true,
+            "got": true,
+            "ok": true
+          },
+          "attributes.attr_0": {
+            "want": "val-49",
+            "got": "val-49",
+            "ok": true
+          },
+          "attributes.attr_1": {
+            "want": 50,
+            "got": 50,
+            "ok": true
+          },
+          "attributes.attr_2": {
+            "want": 11.5,
+            "got": 11.5,
+            "ok": true
+          },
+          "attributes.attr_3": {
+            "want": true,
+            "got": true,
+            "ok": true
+          },
+          "attributes.attr_4": {
+            "want": "val-53",
+            "got": "val-53",
+            "ok": true
+          },
+          "attributes.attr_5": {
+            "want": 78,
+            "got": 78,
+            "ok": true
+          },
+          "attributes.attr_6": {
+            "want": 15.5,
+            "got": 15.5,
+            "ok": true
+          },
+          "attributes.attr_7": {
+            "want": true,
+            "got": true,
+            "ok": true
+          },
+          "attributes.attr_8": {
+            "want": "val-57",
+            "got": "val-57",
+            "ok": true
+          },
+          "attributes.attr_9": {
+            "want": 6,
+            "got": 6,
+            "ok": true
+          },
+          "attributes.attr_10": {
+            "want": 19.5,
+            "got": 19.5,
+            "ok": true
+          },
+          "attributes.attr_11": {
+            "want": true,
+            "got": true,
+            "ok": true
+          },
+          "attributes.attr_12": {
+            "want": "val-61",
+            "got": "val-61",
+            "ok": true
+          },
+          "attributes.attr_13": {
+            "want": 34,
+            "got": 34,
+            "ok": true
+          },
+          "attributes.attr_14": {
+            "want": 23.5,
+            "got": 23.5,
+            "ok": true
+          },
+          "attributes.attr_15": {
+            "want": true,
+            "got": true,
+            "ok": true
+          },
+          "attributes.attr_16": {
+            "want": "val-65",
+            "got": "val-65",
+            "ok": true
+          },
+          "attributes.attr_17": {
+            "want": 62,
+            "got": 62,
+            "ok": true
+          },
+          "attributes.attr_18": {
+            "want": 27.5,
+            "got": 27.5,
+            "ok": true
+          },
+          "attributes.attr_19": {
+            "want": true,
+            "got": true,
+            "ok": true
+          },
+          "attributes.attr_20": {
+            "want": "val-69",
+            "got": "val-69",
+            "ok": true
+          },
+          "attributes.attr_21": {
+            "want": 90,
+            "got": 90,
+            "ok": true
+          },
+          "attributes.attr_22": {
+            "want": 31.5,
+            "got": 31.5,
+            "ok": true
+          },
+          "attributes.attr_23": {
+            "want": true,
+            "got": true,
+            "ok": true
+          },
+          "attributes.attr_24": {
+            "want": "val-73",
+            "got": "val-73",
+            "ok": true
+          },
+          "attributes.attr_25": {
+            "want": 18,
+            "got": 18,
+            "ok": true
+          }
+        }
+      }
+    },
+    {
+      "id": "big-args-100",
+      "suite": "big_args",
+      "prompt": "<100 fields>",
+      "output": null,
+      "raw": "",
+      "elapsed": 11.25,
+      "refused": false,
+      "n_leaves": 100,
+      "structural_valid": false,
+      "grade": {
+        "score": 0.0,
+        "error": "context size exceeded"
+      }
+    }
+  ]
+}

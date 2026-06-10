@@ -13,6 +13,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import shutil
 import subprocess
 import time
 
@@ -145,6 +146,8 @@ def main() -> None:
     ap.add_argument("--power", action="store_true", help="add CPU/GPU/ANE power table (sudo)")
     ap.add_argument("--ane", action="store_true",
                     help="capture ANE hardware-interval activity via Instruments (~20s, no sudo)")
+    ap.add_argument("--publish", action="store_true",
+                    help="copy this run's report to docs/ for GitHub Pages")
     ap.add_argument("--out", default=os.path.join(HERE, "results"))
     args = ap.parse_args()
 
@@ -221,6 +224,13 @@ def main() -> None:
         print(f"  {C['d']}(every ANE op a sub-30ms burst — why power sampling reads ~0){C['x']}")
     print(f"\n{C['g']}reports:{C['x']} {paths['html']}")
     print(f"         {paths['md']}\n         {paths['json']}")
+
+    if args.publish:
+        docs = os.path.join(HERE, "docs")
+        os.makedirs(docs, exist_ok=True)
+        shutil.copy(paths["html"], os.path.join(docs, "index.html"))
+        shutil.copy(paths["json"], os.path.join(docs, "results.json"))
+        print(f"{C['g']}published:{C['x']} docs/index.html (commit + push for GitHub Pages)")
 
 
 if __name__ == "__main__":

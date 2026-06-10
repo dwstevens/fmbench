@@ -4,6 +4,8 @@ A deterministic benchmark for **Apple Foundation Models** structured output and 
 calling, driven entirely through the on-device `fm` CLI that ships with macOS Apple
 Intelligence.
 
+📊 **Live report:** https://dwstevens.github.io/fmbench/
+
 It answers a practical question: *can you trust the free, on-device model to do real
 tool calling and structured extraction?* The short version — **yes for structure and
 routing, no for arithmetic** — and this harness measures exactly where the line is.
@@ -103,6 +105,8 @@ uv run python run.py --ane           # capture ANE hardware activity (Instrument
 
 Each run writes a timestamped folder under `results/` with `report.html` (a styled,
 screenshot-ready page), `report.md`, and `results.json` for diffing runs over time.
+Add `--publish` to also copy the report into `docs/` — commit and push, and it serves
+from [GitHub Pages](https://dwstevens.github.io/fmbench/).
 
 ## The fm schema dialect (gotchas worth knowing)
 
