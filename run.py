@@ -77,7 +77,10 @@ def run(suites: list[str], limit: int | None, schema_paths: dict[str, str]) -> l
             if res.refused:
                 grade = {"score": 0.0, "refused": True}
             elif obj is None:
-                grade = {"score": 0.0, "error": res.parse_error or "no output"}
+                err = res.parse_error or "no output"
+                if "context size" in (res.stderr or "").lower():
+                    err = "context size exceeded"
+                grade = {"score": 0.0, "error": err}
             else:
                 grade = grading.GRADERS[suite](obj, schema_obj, case["expect"])
 
