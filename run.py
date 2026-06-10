@@ -16,7 +16,7 @@ import os
 import subprocess
 import time
 
-from fmbench import grading, perf as perfmod, report, schemas
+from fmbench import ane as anemod, grading, perf as perfmod, report, schemas
 from fmbench.runner import run_fm
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -128,6 +128,8 @@ def main() -> None:
     ap.add_argument("--quick", action="store_true", help="4 cases/suite, skip perf")
     ap.add_argument("--no-perf", action="store_true", help="skip perf/resource track")
     ap.add_argument("--power", action="store_true", help="add CPU/GPU/ANE power table (sudo)")
+    ap.add_argument("--ane", action="store_true",
+                    help="capture ANE hardware-interval activity via Instruments (~20s, no sudo)")
     ap.add_argument("--out", default=os.path.join(HERE, "results"))
     args = ap.parse_args()
 
@@ -160,6 +162,16 @@ def main() -> None:
             else:
                 print(f"  {C['y']}power: unavailable — {p.get('reason')}{C['x']}")
 
+    if args.ane and not args.quick:
+        print(f"\n{C['b']}{C['c']}▶ ANE{C['x']} (Instruments Core ML hardware-interval trace, ~20s)…")
+        perf["ane"] = anemod.measure_ane()
+        a = perf["ane"]
+        if a.get("available"):
+            print(f"  ANE: {C['b']}{a['ops']} ops · {a['active_ms']/1000:.1f}s active · "
+                  f"{a['busy_pct']}% duty cycle{C['x']} (median op {a['median_us']:.0f}µs)")
+        else:
+            print(f"  {C['y']}ANE: unavailable — {a.get('reason')}{C['x']}")
+
     meta = {"model": "system", "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
             "total_cases": len(results), "suites": suites}
     stamp = time.strftime("%Y%m%d-%H%M%S")
@@ -184,6 +196,14 @@ def main() -> None:
             col = C["g"] if (key == "ane" and l - i > 0) else ""
             print(f"  {name:<8}{i:>8.0f}{l:>8.0f}{col}{l - i:>+9.0f}{C['x']}")
         print(f"  {C['d']}(ANE jumps under load, GPU barely moves — the receipts){C['x']}")
+    an = perf.get("ane")
+    if an and an.get("available"):
+        print(f"\n{C['b']}══ ANE hardware activity (Instruments Core ML trace) ════{C['x']}")
+        print(f"  {'Neural Engine ops':<26}{an['ops']:>10}")
+        print(f"  {'ANE active time':<26}{an['active_ms']/1000:>9.1f}s")
+        print(f"  {'duty cycle (active/window)':<26}{C['g']}{an['busy_pct']:>9.1f}%{C['x']}")
+        print(f"  {'median / max op':<26}{an['median_us']:>6.0f}µs /{an['max_ms']:>5.1f}ms")
+        print(f"  {C['d']}(every ANE op a sub-30ms burst — why power sampling reads ~0){C['x']}")
     print(f"\n{C['g']}reports:{C['x']} {paths['html']}")
     print(f"         {paths['md']}\n         {paths['json']}")
 
