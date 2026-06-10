@@ -1,0 +1,10 @@
+# Generated benchmark output
+results/
+schemas/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.uv/
+*.egg-info/

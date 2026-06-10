@@ -1,0 +1,15 @@
+[project]
+name = "fmbench"
+version = "0.1.0"
+description = "A deterministic benchmark for Apple Foundation Models structured output and tool calling, via the on-device `fm` CLI."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "David Stevens" }]
+dependencies = []  # standard library only — no third-party packages
+
+[project.urls]
+Homepage = "https://github.com/dwstevens/fmbench"
+
+[tool.setuptools]
+packages = ["fmbench"]
