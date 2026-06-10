@@ -153,8 +153,10 @@ def main() -> None:
             perf["power"] = perfmod.sample_power()
             p = perf["power"]
             if p.get("available"):
-                print(f"  power: CPU {p['cpu']['avg_mw']} · GPU {p['gpu']['avg_mw']} · "
-                      f"ANE {p['ane']['avg_mw']} mW (avg)")
+                il, lo = p["idle"], p["load"]
+                print(f"  power: ANE {il['ane']['median_mw']:.0f}→{lo['ane']['median_mw']:.0f}"
+                      f" · GPU {il['gpu']['median_mw']:.0f}→{lo['gpu']['median_mw']:.0f}"
+                      f" · CPU {il['cpu']['median_mw']:.0f}→{lo['cpu']['median_mw']:.0f} mW (idle→load)")
             else:
                 print(f"  {C['y']}power: unavailable — {p.get('reason')}{C['x']}")
 
@@ -174,12 +176,14 @@ def main() -> None:
         print(f"  {C['d']}(GPU absent — inference runs on the ANE){C['x']}")
     pw = perf.get("power")
     if pw and pw.get("available"):
-        print(f"\n{C['b']}══ CPU / GPU / ANE power (mW, powermetrics) ═════════════{C['x']}")
-        print(f"  {'Engine':<10}{'Avg mW':>9}{'Peak mW':>10}")
+        il, lo = pw["idle"], pw["load"]
+        print(f"\n{C['b']}══ CPU / GPU / ANE power — idle → load (mW) ═════════════{C['x']}")
+        print(f"  {'Engine':<8}{'Idle':>8}{'Load':>8}{'Δ':>9}")
         for key, name in (("cpu", "CPU"), ("gpu", "GPU"), ("ane", "ANE")):
-            d = pw.get(key, {})
-            print(f"  {name:<10}{str(d.get('avg_mw')):>9}{str(d.get('peak_mw')):>10}")
-        print(f"  {C['d']}(GPU idle while ANE carries the load — the receipts){C['x']}")
+            i, l = il[key]["median_mw"], lo[key]["median_mw"]
+            col = C["g"] if (key == "ane" and l - i > 0) else ""
+            print(f"  {name:<8}{i:>8.0f}{l:>8.0f}{col}{l - i:>+9.0f}{C['x']}")
+        print(f"  {C['d']}(ANE jumps under load, GPU barely moves — the receipts){C['x']}")
     print(f"\n{C['g']}reports:{C['x']} {paths['html']}")
     print(f"         {paths['md']}\n         {paths['json']}")
 

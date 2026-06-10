@@ -172,31 +172,33 @@ def sudo_cached() -> bool:
         return False
 
 
-def sample_power(duration_s: float = 20.0, interval_ms: int = 250) -> dict:
-    """Sample CPU/GPU/ANE power (mW) via powermetrics while a generation runs.
+# The three power lines appear CONSECUTIVELY in the cpu_power summary block. Matching
+# them as one triplet pins the correct GPU value (a second standalone "GPU Power:" line
+# lives in the GPU-usage block and would otherwise be double-counted).
+_POWER_TRIPLET = re.compile(
+    r"CPU Power:\s*([\d.]+)\s*mW\s+"
+    r"GPU Power:\s*([\d.]+)\s*mW\s+"
+    r"ANE Power:\s*([\d.]+)\s*mW")
 
-    On Apple Silicon the CPU/GPU/ANE power lines all live in the ``cpu_power``
-    sampler block. Requires cached sudo (call after `sudo -v`); returns
-    {available: False, ...} otherwise so the rest of the run is unaffected.
+
+def _pm_window(window_s: float, interval_ms: int, load: bool) -> dict | None:
+    """Sample CPU/GPU/ANE power for one window. If ``load``, keep the ANE busy with
+    back-to-back generations; otherwise sample the (near-)idle machine.
+
+    Returns per-engine median/peak in mW over the window, or None if no samples parsed.
+    powermetrics goes to a temp FILE (not a pipe) to avoid a buffer deadlock, and the
+    first sample is discarded (it reports since-boot/cumulative values).
     """
-    if not sudo_cached():
-        return {"available": False,
-                "reason": "sudo not available — run `sudo -v` first, or omit --power"}
-
-    n = max(1, int(duration_s / (interval_ms / 1000)))
-    # Write powermetrics output to a file, NOT a pipe: it emits far more than the 64 KB
-    # pipe buffer, and draining a pipe only after the load loop would deadlock.
-    with tempfile.NamedTemporaryFile("w+", suffix=".pm", delete=False) as tf:
-        pm_path = tf.name
-    hard_deadline = time.perf_counter() + duration_s + 45  # wall-clock guard
-    with open(pm_path, "w") as out_fh:
+    n = max(2, int(window_s / (interval_ms / 1000))) + 1  # +1 for the dropped first sample
+    with tempfile.NamedTemporaryFile(suffix=".pm", delete=False) as tf:
+        path = tf.name
+    deadline = time.perf_counter() + window_s + 45
+    with open(path, "w") as out_fh:
         pm = subprocess.Popen(
             ["sudo", "-n", "powermetrics", "--samplers", "cpu_power,gpu_power",
              "-i", str(interval_ms), "-n", str(n)],
             stdout=out_fh, stderr=subprocess.DEVNULL)
-
-        # Keep the ANE busy across the sampling window (re-launch if a gen finishes).
-        while pm.poll() is None and time.perf_counter() < hard_deadline:
+        while load and pm.poll() is None and time.perf_counter() < deadline:
             try:
                 subprocess.run(["fm", "respond", "--no-stream", LONG_PROMPT],
                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
@@ -204,30 +206,38 @@ def sample_power(duration_s: float = 20.0, interval_ms: int = 250) -> dict:
             except Exception:  # noqa: BLE001
                 break
         try:
-            pm.wait(timeout=10)
+            pm.wait(timeout=window_s + 20)
         except subprocess.TimeoutExpired:
             pm.kill()
 
-    with open(pm_path) as fh:
-        out_text = fh.read()
+    text = open(path).read()
     try:
-        os.unlink(pm_path)
+        os.unlink(path)
     except OSError:
         pass
 
-    def _series(label: str) -> list[float]:
-        return [float(m) for m in re.findall(rf"{label}:\s*([\d.]+)\s*mW", out_text)]
+    samples = [(float(c), float(g), float(a))
+               for c, g, a in _POWER_TRIPLET.findall(text)][1:]  # drop first sample
+    if not samples:
+        return None
 
-    if not _series("CPU Power") and not _series("GPU Power"):
+    def col(i: int) -> dict:
+        vals = [s[i] for s in samples]
+        return {"median_mw": round(statistics.median(vals), 1),
+                "peak_mw": round(max(vals), 1)}
+    return {"samples": len(samples), "cpu": col(0), "gpu": col(1), "ane": col(2)}
+
+
+def sample_power(window_s: float = 12.0, interval_ms: int = 250) -> dict:
+    """Prove the ANE carries inference: sample CPU/GPU/ANE power (mW) at idle, then
+    under sustained generation, and report the delta. GPU should barely move while the
+    ANE jumps. Requires cached sudo (call after `sudo -v`)."""
+    if not sudo_cached():
         return {"available": False,
-                "reason": "powermetrics produced no power samples (unexpected output format)"}
-
-    result = {"available": True, "samples": n, "window_s": duration_s}
-    for key, label in (("cpu", "CPU Power"), ("gpu", "GPU Power"), ("ane", "ANE Power")):
-        vals = _series(label)
-        result[key] = {
-            "avg_mw": round(statistics.mean(vals), 1) if vals else None,
-            "peak_mw": round(max(vals), 1) if vals else None,
-            "n": len(vals),
-        }
-    return result
+                "reason": "sudo not available — run `sudo -v` first, or omit --power"}
+    idle = _pm_window(window_s, interval_ms, load=False)
+    load = _pm_window(window_s, interval_ms, load=True)
+    if not idle or not load:
+        return {"available": False,
+                "reason": "powermetrics produced no parseable power samples"}
+    return {"available": True, "window_s": window_s, "idle": idle, "load": load}
