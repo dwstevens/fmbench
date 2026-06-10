@@ -29,7 +29,7 @@ CPU-by-process table showing *where* the work lands, and optional CPU/GPU/ANE po
 
 ## Sample results
 
-From one run on macOS 27 "Golden Gate" (M-series), `system` model, greedy decoding:
+From one run on macOS 27 Golden Gate (build 26A5353q, M-series), `system` model, greedy decoding:
 
 | Suite | Cases | Valid JSON | Avg score |
 |---|---:|---:|---:|
